@@ -11,8 +11,8 @@ set (CPACK_PACKAGE_INSTALL_DIRECTORY "@WSJTX_VERSION_PATCH@")
 else()
 set (CPACK_PACKAGE_INSTALL_DIRECTORY ${CPACK_PACKAGE_NAME})
 endif()
-set (CPACK_PACKAGE_EXECUTABLES jtdx "@PROJECT_NAME@")
-set (CPACK_CREATE_DESKTOP_LINKS jtdx)
+set (CPACK_PACKAGE_EXECUTABLES wkjtx "@PROJECT_NAME@")
+set (CPACK_CREATE_DESKTOP_LINKS wkjtx)
 set (CPACK_STRIP_FILES TRUE)
 
 #
@@ -26,9 +26,9 @@ if (CPACK_GENERATOR MATCHES "NSIS")
   set (CPACK_STRIP_FILES FALSE)	# breaks Qt packaging on Windows
 
   if("@CMAKE_SIZEOF_VOID_P@" EQUAL 8)
-  set (CPACK_NSIS_INSTALL_ROOT "C:\\JTDX64")
+  set (CPACK_NSIS_INSTALL_ROOT "C:\\WKjTX64")
   else()
-  set (CPACK_NSIS_INSTALL_ROOT "C:\\JTDX32")
+  set (CPACK_NSIS_INSTALL_ROOT "C:\\WKjTX32")
   endif()
 
   # set the install/unistall icon used for the installer itself
@@ -42,14 +42,14 @@ if (CPACK_GENERATOR MATCHES "NSIS")
     "@PROJECT_MANUAL_DIRECTORY_URL@/@PROJECT_MANUAL@" "@PROJECT_NAME@ Documentation"
     "@PROJECT_HOMEPAGE@" "@PROJECT_NAME@ Web Site"
     )
-  # Use the icon from jtdx for add-remove programs
-  set (CPACK_NSIS_INSTALLED_ICON_NAME "bin\\\\jtdx.exe")
+  # Use the icon from wkjtx for add-remove programs
+  set (CPACK_NSIS_INSTALLED_ICON_NAME "bin\\\\wkjtx.exe")
 
   set (CPACK_NSIS_DISPLAY_NAME "${CPACK_PACKAGE_DESCRIPTION_SUMMARY}")
   set (CPACK_NSIS_HELP_LINK "@PROJECT_MANUAL_DIRECTORY_URL@/@PROJECT_MANUAL@")
   set (CPACK_NSIS_URL_INFO_ABOUT "@PROJECT_HOMEPAGE@")
   set (CPACK_NSIS_CONTACT "${CPACK_PACKAGE_CONTACT}")
-  set (CPACK_NSIS_MUI_FINISHPAGE_RUN "jtdx.exe")
+  set (CPACK_NSIS_MUI_FINISHPAGE_RUN "wkjtx.exe")
   set (CPACK_NSIS_MODIFY_PATH ON)
 
   # Setup the installer and uninstall VersionInfo resource
