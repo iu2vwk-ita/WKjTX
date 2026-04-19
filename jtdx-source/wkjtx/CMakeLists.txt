@@ -23,6 +23,9 @@ set (WKJTX_SOURCES
   LogRouter.hpp
   QrzUploader.cpp
   QrzUploader.hpp
+  detectors/Maidenhead.cpp
+  detectors/Maidenhead.hpp
+  detectors/ZoneTables.hpp
   detectors/NewDxccDetector.cpp
   detectors/NewDxccDetector.hpp
   detectors/ZoneDetector.cpp

@@ -33,8 +33,15 @@
 #include <QHash>
 #include <QDateTime>
 #include <deque>
+#include <memory>
 
 namespace wkjtx {
+
+class NewDxccDetector;
+class ZoneDetector;
+class GridDetector;
+class PrefixDetector;
+class CallsignDetector;
 
 enum class AutoCallCategory
 {
@@ -123,13 +130,42 @@ signals:
   // badge refreshes on this.
   void configChanged ();
 
+  // Access to underlying detectors (for log-scan at startup and
+  // testing). Profile manager hands these to us; AutoCall doesn't
+  // own the detectors by default — ownership decision is deferred to
+  // the MainWindow wiring step so that JTDX's existing ADIF scan can
+  // populate all detectors from one pass.
+  NewDxccDetector   * dxccDetector ()     { return dxcc_; }
+  ZoneDetector      * zoneDetector ()     { return zone_; }
+  GridDetector      * gridDetector ()     { return grid_; }
+  PrefixDetector    * prefixDetector ()   { return prefix_; }
+  CallsignDetector  * callsignDetector () { return callsign_; }
+
+  // Inject detectors. Call once at setup, before onDecode() fires.
+  void setDetectors (NewDxccDetector * dxcc,
+                     ZoneDetector * zone,
+                     GridDetector * grid,
+                     PrefixDetector * prefix,
+                     CallsignDetector * callsign);
+
 private:
   AutoCallConfig config_;
   QHash<QString, QDateTime> lastCallPerCallsign_;
   std::deque<QDateTime> recentGlobalCalls_;  // for rate-limit window
 
+  // Detectors — injected, not owned.
+  NewDxccDetector  * dxcc_     {nullptr};
+  ZoneDetector     * zone_     {nullptr};
+  GridDetector     * grid_     {nullptr};
+  PrefixDetector   * prefix_   {nullptr};
+  CallsignDetector * callsign_ {nullptr};
+
   bool isWithinCooldown (QString const & callsign, QDateTime const & now) const;
   bool isWithinRateLimit (QDateTime const & now);
+
+  // Pipeline helpers.
+  bool isCategoryOn (AutoCallCategory c) const;
+  bool matchesAlert (Decode const & d) const;
 
   Q_DISABLE_COPY (AutoCall)
 };
