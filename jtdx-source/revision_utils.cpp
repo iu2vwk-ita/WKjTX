@@ -83,6 +83,6 @@ QString version (bool include_patch)
 
 QString program_title (QString const& revision)
 {
-  QString id {QCoreApplication::applicationName () + "  by HF community                                         v" + QCoreApplication::applicationVersion ()};
-  return id + " " + revision + ", derivative work based on WSJT-X by K1JT";
+  QString id {QCoreApplication::applicationName () + " v" + QCoreApplication::applicationVersion ()};
+  return id + " " + revision + " — fork of JTDX, derivative of WSJT-X by K1JT";
 }

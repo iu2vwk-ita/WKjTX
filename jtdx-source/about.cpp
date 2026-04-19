@@ -16,7 +16,11 @@ CAboutDlg::CAboutDlg(QWidget *parent) :
 
   ui->labelTxt->setText ("<html><h2>"
                          + QCoreApplication::applicationName () + " v"
-                         + QCoreApplication::applicationVersion () + "  HF software" + "</h2>\n\n"
+                         + QCoreApplication::applicationVersion () + "</h2>\n\n"
+                         "<b>WKjTX is an independent freeware fork of JTDX,</b><br>"
+                         "which is itself a fork of WSJT-X. WKjTX is NOT endorsed<br>"
+                         "by the WSJT-X or JTDX projects.<br><br>"
+                         "<b>Upstream credits (preserved):</b><br><br>"
                          "It is modified WSJT-X software forked from WSJT-X v1.7 r6462, <br>"
                          "FT8 code is forked from WSJT-X v1.8 and v2.0, <br>"
                          "FT4 code is forked from WSJT-X v2.1, <br>"
@@ -33,9 +37,11 @@ CAboutDlg::CAboutDlg(QWidget *parent) :
                          "NL9222, OE1MWW, ON3CQ, PA7TWO, PP5FMM, R3BB, RK3AOL, RX3ASP, RA4UDC, RW4O, R0JF,<br>"
                          "SM0LTV, SP2L, SV1IYF, UA3ALE, US-E-12, VE3NEA, VK3AMA, VK6KXW, VK7YUM, VR2UPU,<br>"
                          "W9MDB, YL3GBC family and LY3BG family: Vytas and Rimas Kudelis. <br><br>"
-                         "<br><br>"
-                         "JTDX is licensed under the terms of Version3<br>"
-                         "of the GNU General Public License(GPL)<br>"
+                         "<b>WKjTX additions</b> &copy; 2026 by IU2VWK:<br>"
+                         "5-slot radio profile quick-switch, Auto-call feature (7 triggers),<br>"
+                         "per-profile log routing, qrz.com upload, rebrand for Windows.<br><br>"
+                         "WKjTX and all upstream code are licensed under the terms of Version 3<br>"
+                         "of the GNU General Public License (GPL):<br>"
                          "<a href=\"https://www.gnu.org/licenses/gpl-3.0.txt\">"
                          "https://www.gnu.org/licenses/gpl-3.0.txt</a>");
 }
