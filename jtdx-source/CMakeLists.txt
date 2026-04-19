@@ -1242,18 +1242,20 @@ endif ()
 # Hamlib's .la dependency info isn't consumed when we link the .a
 # directly via CMAKE_PREFIX_PATH.
 #
-# These MUST come AFTER libhamlib.a in the link line because GNU ld
-# resolves static libraries left-to-right. target_link_libraries puts
-# them BEFORE transitive deps, so we append via LINK_FLAGS instead
-# (which cmake drops at the end of the linker command).
+# The libs MUST be scanned AFTER libhamlib.a by GNU ld (left-to-right
+# resolution of static archives). Neither target_link_libraries nor
+# LINK_FLAGS lands them in the right spot — the former puts them
+# BEFORE transitive deps, the latter puts them BEFORE object files.
 #
-# This block MUST stay AFTER all prior set_target_properties calls that
-# touch LINK_FLAGS, otherwise those calls overwrite our appended libs.
-# Use APPEND_STRING so we add to whatever LINK_FLAGS already contains
-# (currently -Wl,--stack,16777216 on Windows).
+# The only slot MinGW emits at the very end of the link command is
+# CMAKE_CXX_STANDARD_LIBRARIES (the `-lkernel32 -luser32 -lgdi32 ...`
+# tail). Appending ws2_32/iphlpapi/wsock32 there puts them AFTER
+# libhamlib.a, resolving the undefined references.
 if (WIN32)
-  set_property (TARGET wkjtx APPEND_STRING PROPERTY
-    LINK_FLAGS " -lws2_32 -liphlpapi -lwsock32")
+  set (CMAKE_CXX_STANDARD_LIBRARIES
+    "${CMAKE_CXX_STANDARD_LIBRARIES} -lws2_32 -liphlpapi -lwsock32")
+  set (CMAKE_C_STANDARD_LIBRARIES
+    "${CMAKE_C_STANDARD_LIBRARIES} -lws2_32 -liphlpapi -lwsock32")
 endif ()
 
 add_resources (message_aggregator_RESOURCES /qss ${message_aggregator_STYLESHEETS})
