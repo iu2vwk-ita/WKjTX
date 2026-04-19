@@ -204,7 +204,20 @@ cmake -G Ninja \
   "$WKJTX_SRC"
 
 log "Building WKjTX (this takes 5-30 minutes on first run)..."
-ninja
+LOG_FILE="$WKJTX_BUILD/build.log"
+log "Full log captured to: $LOG_FILE"
+# Pipe through tee so the user sees output AND it's captured to disk.
+# PIPESTATUS preserves ninja's exit code since tee always succeeds.
+ninja 2>&1 | tee "$LOG_FILE"
+NINJA_RC=${PIPESTATUS[0]}
+if [ $NINJA_RC -ne 0 ]; then
+  log ""
+  log "=== Build failed. Last 10 FAILED lines from $LOG_FILE: ==="
+  grep -B1 -A20 '^FAILED:' "$LOG_FILE" | tail -50 || true
+  log "=== End of failure excerpt ==="
+  log "Full log is at: $LOG_FILE"
+  exit $NINJA_RC
+fi
 
 # ------------------------------------------------------------- tests
 log "Running unit tests..."
