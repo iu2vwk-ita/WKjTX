@@ -30,6 +30,8 @@ set (WKJTX_SOURCES
   QrzUploader.hpp
   ThemeManager.cpp
   ThemeManager.hpp
+  AutoCallSettingsDialog.cpp
+  AutoCallSettingsDialog.hpp
   detectors/Maidenhead.cpp
   detectors/Maidenhead.hpp
   detectors/ZoneTables.hpp
