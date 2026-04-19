@@ -14,6 +14,11 @@ if (NOT DEFINED WKJTX_BUILD_TESTS)
   option (WKJTX_BUILD_TESTS "Build WKjTX unit tests" OFF)
 endif ()
 
+# Qt5 is found at top-level CMakeLists.txt; subdirectories inherit the
+# find_package result. We reference Qt5::Core (QObject, QString) and
+# Qt5::Network (QNetworkAccessManager for QrzUploader).
+find_package (Qt5 REQUIRED COMPONENTS Core Network Widgets)
+
 set (WKJTX_SOURCES
   ProfileManager.cpp
   ProfileManager.hpp
@@ -52,6 +57,11 @@ target_include_directories (wkjtx_modules PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${CMAKE_CURRENT_SOURCE_DIR}/detectors
 )
+# Propagate Qt5 include paths and usage requirements.
+# target_link_libraries on an OBJECT library (CMake >= 3.12) attaches
+# INTERFACE_INCLUDE_DIRECTORIES of Qt5 modules so the module sources
+# can find QString / QObject / QNetworkAccessManager headers.
+target_link_libraries (wkjtx_modules PUBLIC Qt5::Core Qt5::Network Qt5::Widgets)
 
 if (WKJTX_BUILD_TESTS)
   enable_testing ()
