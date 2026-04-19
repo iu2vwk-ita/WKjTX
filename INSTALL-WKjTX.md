@@ -11,7 +11,24 @@ differ.
 - ~20 GB free disk space (MSYS2 + sources + build artifacts).
 - Administrator account (MSYS2 installer prompts for UAC).
 
-## 2. Install MSYS2
+## 2a. Install OmniRig (Windows-only, freeware, one-time)
+
+JTDX/WKjTX uses OmniRig by VE3NEA as one of the available transceiver
+control drivers. The build process requires OmniRig to be registered
+as a COM server on Windows so `dumpcpp` can generate a C++ wrapper
+from it. Without OmniRig, cmake aborts with
+`You need to install OmniRig on this computer`.
+
+1. Go to <http://dxatlas.com/Download.asp>.
+2. Download **Omni-Rig 1.20** (a ~1 MB ZIP).
+3. Extract it and run `setup.exe`. Accept default settings.
+4. Done — OmniRig registers itself with Windows automatically.
+
+You do not have to use OmniRig at runtime (Hamlib is the alternative
+and more commonly used). But its COM registration must exist for the
+build to succeed.
+
+## 2b. Install MSYS2
 
 Download `msys2-x86_64-YYYYMMDD.exe` from <https://www.msys2.org/>
 and run with default settings. Install path: `C:\msys64`.
@@ -145,6 +162,11 @@ Produces `wkjtx-2.2.159-win64.exe` in the build directory.
   works around this by installing Hamlib to `C:\wkjtx-build\hamlib`
   regardless of where the project root is. If building manually,
   use a no-space `--prefix` for the Hamlib `configure` step.
+- **`You need to install OmniRig on this computer`** at the cmake
+  step: the Windows transceiver control driver OmniRig is not
+  registered as a COM server on your system. See section **2a**
+  above for the install steps. The automated `build.bat` checks for
+  this before running cmake and warns you early if missing.
 
 ## Smoke test
 

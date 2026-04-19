@@ -108,6 +108,28 @@ if [ "$MODE" = "full" ]; then
   else
     log "All dependencies present."
   fi
+
+  # Check for OmniRig COM registration (Windows-only runtime dep).
+  # JTDX's CMakeLists uses Qt's dumpcpp to generate a C++ wrapper
+  # from the OmniRig COM class at build time. If OmniRig isn't
+  # registered, `dumpcpp -getfile {GUID}` returns empty and cmake
+  # errors with "You need to install OmniRig on this computer".
+  OMNIRIG_KEY="HKCR\\CLSID\\{4FE359C5-A58F-459D-BE95-CA559FB4F270}"
+  if ! reg.exe query "$OMNIRIG_KEY" >/dev/null 2>&1; then
+    log "[WARN] OmniRig COM class not registered on this system."
+    log "       JTDX's CMakeLists will FAIL with 'You need to install OmniRig'."
+    log ""
+    log "       To fix:"
+    log "         1. Download from http://dxatlas.com/Download.asp"
+    log "            (Omni-Rig 1.20, freeware, ~1 MB)"
+    log "         2. Extract the zip and run setup.exe (accept defaults)."
+    log "         3. Re-run build.bat"
+    log ""
+    log "       Press Ctrl+C to abort, or Enter to continue anyway (build"
+    log "       will fail at the cmake step, but this lets you see for"
+    log "       yourself)."
+    read -r -p "> " _ignored
+  fi
 fi
 
 # ------------------------------------------------------------- hamlib
