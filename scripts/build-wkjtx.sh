@@ -112,6 +112,16 @@ if [ "$MODE" = "full" ]; then
     log "All dependencies present."
   fi
 
+  # MSYS2 ships Qt5's dumpcpp as `dumpcpp-qt5.exe` (suffixed to disambiguate
+  # from Qt4/Qt6). CMake's Qt5 find-module calls it plain `dumpcpp.exe`, which
+  # fails as DUMPCPP_Executable-NOTFOUND. Create a copy without the suffix.
+  DUMPCPP_SUFFIXED="/c/msys64/mingw64/bin/dumpcpp-qt5.exe"
+  DUMPCPP_PLAIN="/c/msys64/mingw64/bin/dumpcpp.exe"
+  if [ -f "$DUMPCPP_SUFFIXED" ] && [ ! -f "$DUMPCPP_PLAIN" ]; then
+    log "Aliasing dumpcpp-qt5.exe → dumpcpp.exe for CMake Qt5 find-module..."
+    cp "$DUMPCPP_SUFFIXED" "$DUMPCPP_PLAIN"
+  fi
+
   # Check for OmniRig presence. JTDX's CMakeLists needs the typelib
   # host file so it can generate a C++ wrapper for the OmniRig COM
   # class. We prefer passing the file path directly via -DAXSERVER
