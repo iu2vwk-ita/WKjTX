@@ -4779,7 +4779,7 @@ void Configuration::impl::on_pbWorkedCall_clicked()
 void Configuration::impl::on_decoded_text_font_push_button_clicked ()
 {
   next_decoded_text_font_ = QFontDialog::getFont (0, decoded_text_font_ , this
-                                                  , tr ("JTDX Decoded Text Font Chooser")
+                                                  , tr ("WKjTX Decoded Text Font Chooser")
                                                   , QFontDialog::MonospacedFonts
                                                   );
 }
