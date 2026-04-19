@@ -966,9 +966,9 @@ MainWindow::MainWindow(bool multiple, QSettings * settings, QSharedMemory *shdme
     {
       while(true)
         {
-          int iret=killbyname("jtdxjt9.exe");
+          int iret=killbyname("wkjtxjt9.exe");
           if(iret == 603) break;
-            JTDXMessageBox::warning_message (this, "", tr ("Error Killing jtdxjt9.exe Process")
+            JTDXMessageBox::warning_message (this, "", tr ("Error Killing wkjtxjt9.exe Process")
                                          , tr ("KillByName return code: %1")
                                          .arg (iret));
         }
@@ -1020,7 +1020,7 @@ MainWindow::MainWindow(bool multiple, QSettings * settings, QSharedMemory *shdme
   new_env.insert  ("OMP_STACKSIZE", "10M");
   proc_jtdxjt9.setProcessEnvironment (new_env);
   proc_jtdxjt9.start(QDir::toNativeSeparators (m_appDir) + QDir::separator () +
-          "jtdxjt9", jt9_args, QIODevice::ReadWrite | QIODevice::Unbuffered);
+          "wkjtxjt9", jt9_args, QIODevice::ReadWrite | QIODevice::Unbuffered);
 
   QString fname {QDir::toNativeSeparators(m_dataDir.absoluteFilePath ("wsjtx_wisdom.dat"))};
   QByteArray cfname=fname.toLocal8Bit();

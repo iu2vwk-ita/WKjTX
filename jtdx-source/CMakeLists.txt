@@ -1125,56 +1125,56 @@ add_executable (jt9code lib/jt9code.f90 jtdx.rc)
 target_link_libraries (jt9code wsjt_fort wsjt_cxx)
 
 generate_version_info (wsprd_VERSION_RESOURCES
-  NAME wsprd_jtdx
+  NAME wsprd_wkjtx
   BUNDLE ${PROJECT_BUNDLE_NAME}
   ICON ${WSJTX_ICON_FILE}
   FILE_DESCRIPTION "WSPR mode decoder"
   )
-add_executable (wsprd_jtdx ${wsprd_CSRCS} lib/indexx.f90 lib/wsprd/osdwspr.f90 ${wsprd_VERSION_RESOURCES})
+add_executable (wsprd_wkjtx ${wsprd_CSRCS} lib/indexx.f90 lib/wsprd/osdwspr.f90 ${wsprd_VERSION_RESOURCES})
 
-target_include_directories (wsprd_jtdx PRIVATE ${FFTW3_INCLUDE_DIRS})
-target_link_libraries (wsprd_jtdx ${FFTW3_LIBRARIES})
+target_include_directories (wsprd_wkjtx PRIVATE ${FFTW3_INCLUDE_DIRS})
+target_link_libraries (wsprd_wkjtx ${FFTW3_LIBRARIES})
 
 add_executable (wsprsim ${wsprsim_CSRCS})
 
 # build the jt9 slow mode decoder driver
 generate_version_info (jtdxjt9_VERSION_RESOURCES
-  NAME jtdxjt9
+  NAME wkjtxjt9
   BUNDLE ${PROJECT_BUNDLE_NAME}
   ICON ${WSJTX_ICON_FILE}
-  FILE_DESCRIPTION "jtdxjt9 - JTDX slow mode decoder"
+  FILE_DESCRIPTION "wkjtxjt9 - JTDX slow mode decoder"
   )
 
-add_executable (jtdxjt9 lib/jt9.f90 lib/jt9a.f90 ${jt9_CXXSRCS} ${jtdjt9_VERSION_RESOURCES})
+add_executable (wkjtxjt9 lib/jt9.f90 lib/jt9a.f90 ${jt9_CXXSRCS} ${jtdjt9_VERSION_RESOURCES})
 if (${OPENMP_FOUND} OR APPLE)
   if (APPLE)
     # On  Mac  we don't  have  working  OpenMP  support in  the  C/C++
     # compilers so we  have to manually set the  correct linking flags
     # and libraries to get OpenMP support in jt9.
-    set_target_properties (jtdxjt9
+    set_target_properties (wkjtxjt9
       PROPERTIES
       Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/fortran_modules_omp
       LINK_LIBRARIES "gomp;gcc_s.1" # assume GNU libgcc OpenMP
       )
-      target_compile_options (jtdxjt9
+      target_compile_options (wkjtxjt9
 	PRIVATE
      	$<$<COMPILE_LANGUAGE:Fortran>:-fopenmp>   # assumes GNU style Fortran compiler
 	)
   else (APPLE)
      if (OpenMP_C_FLAGS)
-       set_target_properties (jtdxjt9
+       set_target_properties (wkjtxjt9
          PROPERTIES
          COMPILE_FLAGS "${OpenMP_C_FLAGS}"
          LINK_FLAGS "${OpenMP_C_FLAGS}"
          )
      endif (OpenMP_C_FLAGS)
-     set_target_properties (jtdxjt9
+     set_target_properties (wkjtxjt9
 	PROPERTIES
         Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/fortran_modules_omp
         )
   endif (APPLE)
   if (WIN32)
-     set_target_properties (jtdxjt9
+     set_target_properties (wkjtxjt9
        PROPERTIES
 ##       COMPILE_FLAGS "${OpenMP_C_FLAGS}"
 ##       LINK_FLAGS "${OpenMP_C_FLAGS}"
@@ -1183,9 +1183,9 @@ if (${OPENMP_FOUND} OR APPLE)
 ##       Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/fortran_modules_omp
       )
   endif ()
-  target_link_libraries (jtdxjt9 wsjt_fort_omp wsjt_cxx Qt5::Core)
+  target_link_libraries (wkjtxjt9 wsjt_fort_omp wsjt_cxx Qt5::Core)
 else (${OPENMP_FOUND} OR APPLE)
-  target_link_libraries (jtdxjt9 wsjt_fort wsjt_cxx Qt5::Core)
+  target_link_libraries (wkjtxjt9 wsjt_fort wsjt_cxx Qt5::Core)
 endif (${OPENMP_FOUND} OR APPLE)
 
 # build the main application
@@ -1320,8 +1320,8 @@ install (TARGETS wkjtx
   BUNDLE DESTINATION . COMPONENT runtime
   )
 
-#install (TARGETS jtdxjt9 jt65code jt9code wsprd message_aggregator udp_daemon
-install (TARGETS jtdxjt9 wsprd_jtdx udp_daemon_jtdx
+#install (TARGETS wkjtxjt9 jt65code jt9code wsprd message_aggregator udp_daemon
+install (TARGETS wkjtxjt9 wsprd_wkjtx udp_daemon_jtdx
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT runtime
   BUNDLE DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT runtime
   )
