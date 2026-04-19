@@ -788,6 +788,11 @@ if (WSJT_GENERATE_DOCS)
   add_subdirectory (doc)
 endif (WSJT_GENERATE_DOCS)
 
+# WKjTX-specific modules: ProfileManager, AutoCall + detectors,
+# LogRouter, QrzUploader, ThemeManager, amber QSS themes.
+# Builds an OBJECT library wkjtx_modules linked into the wkjtx exe.
+add_subdirectory (wkjtx)
+
 #
 # C & C++ setup
 #
@@ -1196,7 +1201,15 @@ add_executable (wkjtx MACOSX_BUNDLE
   ${WSJTX_ICON_FILE}
   ${wsjtx_RESOURCES_RCC}
   ${jtdx_VERSION_RESOURCES}
+  $<TARGET_OBJECTS:wkjtx_modules>
   )
+# WKjTX modules live in jtdx-source/wkjtx/. Add its headers to the
+# include path so main.cpp and MainWindow can `#include "wkjtx/...".
+target_include_directories (wkjtx PRIVATE
+  ${CMAKE_SOURCE_DIR}
+  ${CMAKE_SOURCE_DIR}/wkjtx
+  ${CMAKE_SOURCE_DIR}/wkjtx/detectors
+)
 
 if (WSJT_CREATE_WINMAIN)
   set_target_properties (wkjtx PROPERTIES WIN32_EXECUTABLE ON)

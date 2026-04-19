@@ -36,6 +36,7 @@
 #include "mainwindow.h"
 #include "commons.h"
 #include "lib/init_random_seed.h"
+#include "wkjtx/ThemeManager.hpp"
 
 namespace
 {
@@ -123,6 +124,16 @@ int main(int argc, char *argv[])
       a.setOrganizationName ("WKjTX");
       a.setOrganizationDomain ("wkjtx.local");
       a.setApplicationVersion (version ());
+
+      // WKjTX theme: apply the user's last-chosen theme BEFORE any
+      // widgets are created so the first paint is already themed.
+      {
+        wkjtx::ThemeManager theme {&a};
+        theme.loadPersisted ();
+        // ThemeManager is local to this scope; the stylesheet persists
+        // on QApplication. MainWindow gets its own ThemeManager instance
+        // later for live theme switching from the menu.
+      }
   if (version().replace("_32A","").indexOf("_") > 1) {
     #include <QDate>
     auto expire_date = QLocale(QLocale::English).toDate(QString(__DATE__).replace("  "," "),"MMM d yyyy").addMonths(3);
