@@ -57,6 +57,7 @@
 #include "HelpTextWindow.hpp"
 #include "SampleDownloader.hpp"
 #include "Audio/BWFFile.hpp"
+#include "wkjtx/ThemeManager.hpp"
 
 #include "ui_mainwindow.h"
 #include "moc_mainwindow.cpp"
@@ -450,6 +451,7 @@ MainWindow::MainWindow(bool multiple, QSettings * settings, QSharedMemory *shdme
   m_manual {network_manager}
 {
   ui->setupUi(this);
+  createThemeMenu ();   // WKjTX: add "Tema" menu between Lang and Help
   m_config.set_jtdxtime (m_jtdxtime);
   ui->decodedTextBrowser->setConfiguration (&m_config);
   ui->decodedTextBrowser2->setConfiguration (&m_config);
@@ -2831,6 +2833,53 @@ void MainWindow::on_actionCopyright_Notice_triggered()
                            "IV3NWV; Greg Beam, KI7MT; Michael Black, W9MDB; Edson Pereira, PY2SDR; "
                            "Philip Karn, KA9Q; and other members of the WSJT Development Group."));
 
+}
+
+// WKjTX: build the "Tema" menu programmatically, inserted before Help
+// on the menu bar. Five preset themes in a QActionGroup (radio-exclusive).
+// Clicking an item applies the theme immediately and persists the choice.
+void MainWindow::createThemeMenu ()
+{
+  auto * menu = new QMenu (tr ("Tema"), this);
+  auto * group = new QActionGroup (menu);
+  group->setExclusive (true);
+
+  auto * tm = new wkjtx::ThemeManager (qApp, this);
+  tm->loadPersisted ();
+
+  struct Entry { wkjtx::ThemeId id; };
+  Entry const entries[] = {
+    {wkjtx::ThemeId::AmberClassic},
+    {wkjtx::ThemeId::AmberNight},
+    {wkjtx::ThemeId::AmberHiContrast},
+    {wkjtx::ThemeId::Native},
+    {wkjtx::ThemeId::DarkLegacy},
+  };
+
+  for (auto const & e : entries) {
+    auto * act = menu->addAction (wkjtx::ThemeManager::displayName (e.id));
+    act->setCheckable (true);
+    act->setData (wkjtx::ThemeManager::idKey (e.id));
+    if (e.id == tm->currentTheme ()) act->setChecked (true);
+    group->addAction (act);
+    connect (act, &QAction::triggered, this,
+             [this, tm, id = e.id] { tm->applyTheme (id); });
+  }
+
+  // Insert before the Help menu so "Tema" sits right next to Lingua/Help.
+  auto const topActions = menuBar ()->actions ();
+  QAction * helpAction = nullptr;
+  for (auto * a : topActions) {
+    if (a->menu () && a->menu ()->objectName () == QLatin1String ("menuHelp")) {
+      helpAction = a;
+      break;
+    }
+  }
+  if (helpAction) {
+    menuBar ()->insertMenu (helpAction, menu);
+  } else {
+    menuBar ()->addMenu (menu);
+  }
 }
 
 void MainWindow::hideMenus(bool checked)

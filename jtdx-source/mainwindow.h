@@ -388,6 +388,7 @@ private:
 
 private:
   void hideMenus (bool b);
+  void createThemeMenu ();   // WKjTX: builds the "Tema" menu with 5 preset themes
 
   JTDXDateTime * m_jtdxtime;
   QProcessEnvironment const& m_env;
