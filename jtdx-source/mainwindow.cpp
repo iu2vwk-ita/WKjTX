@@ -1029,8 +1029,8 @@ MainWindow::MainWindow(bool multiple, QSettings * settings, QSharedMemory *shdme
   connect (&m_wav_future_watcher, &QFutureWatcher<void>::finished, this, &MainWindow::diskDat);
 
 #if JTDX_DEBUG_TO_FILE
-  FILE * pFile = fopen (QDir(QStandardPaths::writableLocation (QStandardPaths::DataLocation)).absoluteFilePath ("jtdx_debug.txt").toStdString().c_str(),"a");  
-  fprintf (pFile,"%s(%0.1f) JTDX v%s start, performance %d threads\n",m_jtdxtime->currentDateTimeUtc2().toString("hh:mm:ss.zzz").toStdString().c_str(),m_jtdxtime->GetOffset(),
+  FILE * pFile = fopen (QDir(QStandardPaths::writableLocation (QStandardPaths::DataLocation)).absoluteFilePath ("wkjtx_debug.txt").toStdString().c_str(),"a");
+  fprintf (pFile,"%s(%0.1f) WKjTX v%s start, performance %d threads\n",m_jtdxtime->currentDateTimeUtc2().toString("hh:mm:ss.zzz").toStdString().c_str(),m_jtdxtime->GetOffset(),
       (version() + (m_tci ? " tci " : " ") + revision()).toStdString().c_str(),QThread::idealThreadCount ());
   fclose (pFile);
 #endif
@@ -4474,7 +4474,7 @@ void MainWindow::guiUpdate()
         if(m_config.write_decoded_debug()) {
           QString autoseqa=ui->AutoSeqButton->text(); int indx=autoseqa.length()-1; QString autoseq="AutoSeq"+autoseqa[indx];
           out << m_jtdxtime->currentDateTimeUtc2().toString("yyyyMMdd_hhmmss.zzz") << "(" << m_jtdxtime->GetOffset() << ")"
-              << "  JTDX v" << QCoreApplication::applicationVersion () << revision () <<" Transmitting " << qSetRealNumberPrecision (12)
+              << "  WKjTX v" << QCoreApplication::applicationVersion () << revision () <<" Transmitting " << qSetRealNumberPrecision (12)
               << (m_freqNominal / 1.e6) << " MHz + " << ui->TxFreqSpinBox->value () <<"Hz  " << m_modeTx << ":  " << m_currentMessage <<
 #if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
                  endl
@@ -7171,7 +7171,7 @@ void MainWindow::handle_transceiver_update (Transceiver::TransceiverState const&
                   QTextStream out(&f2);
                   out << m_jtdxtime->currentDateTimeUtc2().toString("yyyyMMdd_hhmmss")
                       << "  " << qSetRealNumberPrecision (12) << (m_freqNominal / 1.e6) << " MHz  "
-                      << m_mode << " JTDX v" << QCoreApplication::applicationVersion () << revision () <<
+                      << m_mode << " WKjTX v" << QCoreApplication::applicationVersion () << revision () <<
 #if QT_VERSION < QT_VERSION_CHECK(5, 15, 0)
                  endl;
 #else
@@ -7476,7 +7476,7 @@ void MainWindow::pskSetLocal ()
   QString antenna_description;
   if (!matches.isEmpty ()) antenna_description = stations->index (matches.first ().row (), StationList::description_column).data ().toString ();
   // qDebug() << "To PSKreporter: local station details";
-  psk_Reporter->setLocalStation(m_config.my_callsign (), m_config.my_grid (), antenna_description, QString {"JTDX v" + version() + (m_tci ? " tci " : " ") + revision()}.simplified ());
+  psk_Reporter->setLocalStation(m_config.my_callsign (), m_config.my_grid (), antenna_description, QString {"WKjTX v" + version() + (m_tci ? " tci " : " ") + revision()}.simplified ());
 }
 
 void MainWindow::transmitDisplay (bool transmitting)
