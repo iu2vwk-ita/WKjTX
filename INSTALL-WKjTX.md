@@ -139,6 +139,12 @@ Produces `wkjtx-2.2.159-win64.exe` in the build directory.
 - **`Could not find hamlib`**: your `CMAKE_PREFIX_PATH` does not
   point to the directory where `make install` placed hamlib in
   section 5. Re-check the path.
+- **`libtool: install: target '...' is not a directory`** during
+  Hamlib's `make install`: classic autotools bug when the install
+  `--prefix` contains a space character. The automated `build.bat`
+  works around this by installing Hamlib to `C:\wkjtx-build\hamlib`
+  regardless of where the project root is. If building manually,
+  use a no-space `--prefix` for the Hamlib `configure` step.
 
 ## Smoke test
 
