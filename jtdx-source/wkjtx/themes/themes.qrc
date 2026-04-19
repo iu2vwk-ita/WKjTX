@@ -1,0 +1,8 @@
+<!DOCTYPE RCC>
+<RCC version="1.0">
+  <qresource prefix="/wkjtx/themes">
+    <file>amber-classic.qss</file>
+    <file>amber-night.qss</file>
+    <file>amber-high-contrast.qss</file>
+  </qresource>
+</RCC>

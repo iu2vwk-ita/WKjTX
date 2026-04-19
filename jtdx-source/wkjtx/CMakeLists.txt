@@ -23,6 +23,8 @@ set (WKJTX_SOURCES
   LogRouter.hpp
   QrzUploader.cpp
   QrzUploader.hpp
+  ThemeManager.cpp
+  ThemeManager.hpp
   detectors/Maidenhead.cpp
   detectors/Maidenhead.hpp
   detectors/ZoneTables.hpp
@@ -38,10 +40,14 @@ set (WKJTX_SOURCES
   detectors/CallsignDetector.hpp
 )
 
+# Theme QSS resource — embeds amber-classic.qss etc. into the binary
+# so themes work after install and don't require the source tree.
+qt5_add_resources (WKJTX_THEME_RESOURCES themes/themes.qrc)
+
 # Export as a static object library that the main wkjtx target will
-# link against starting in Plan 2. For v0.1 this is a no-op (not
-# referenced by the top-level CMakeLists.txt yet).
-add_library (wkjtx_modules OBJECT ${WKJTX_SOURCES})
+# link against. Starting v0.2 (theme system) the wkjtx target must
+# link against these modules and include the theme resources.
+add_library (wkjtx_modules OBJECT ${WKJTX_SOURCES} ${WKJTX_THEME_RESOURCES})
 target_include_directories (wkjtx_modules PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${CMAKE_CURRENT_SOURCE_DIR}/detectors
