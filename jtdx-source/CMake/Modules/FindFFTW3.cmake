@@ -63,14 +63,23 @@ foreach (_comp ${_components})
   endif (_comp STREQUAL "single")
 endforeach (_comp ${_components})
 
-# If using threads, we need to link against threaded libraries as well - except on Windows.
-if (NOT WIN32 AND _use_threads)
+# If using threads, we need to link against threaded libraries as well.
+#
+# WKjTX patch: original upstream excluded Windows ("NOT WIN32 AND
+# _use_threads") on the assumption that Windows FFTW packages did not
+# ship threaded variants. MSYS2 DOES ship libfftw3f_threads and
+# libfftw3f_omp, and the JTDX Fortran source calls fftwf_init_threads /
+# fftwf_plan_with_nthreads / fftwf_cleanup_threads unconditionally.
+# Without the threaded lib on the link line, ld fails with undefined
+# references to all three symbols. Fix: treat Windows the same as any
+# other platform.
+if (_use_threads)
   set (_thread_libs)
   foreach (_lib ${_libraries})
     list (APPEND _thread_libs ${_lib}_threads)
   endforeach (_lib ${_libraries})
   set (_libraries ${_thread_libs} ${_libraries})
-endif (NOT WIN32 AND _use_threads)
+endif (_use_threads)
 
 # Keep a list of variable names that we need to pass on to
 # find_package_handle_standard_args().
