@@ -109,53 +109,26 @@ if [ "$MODE" = "full" ]; then
     log "All dependencies present."
   fi
 
-  # Check for OmniRig COM registration (Windows-only runtime dep).
-  # JTDX's CMakeLists uses Qt's dumpcpp to generate a C++ wrapper from
-  # the OmniRig COM class at build time. If OmniRig isn't registered,
-  # `dumpcpp -getfile {GUID}` returns empty and cmake errors out.
-  #
-  # OmniRig is a 32-bit COM local server (OmniRig.exe). On 64-bit
-  # Windows it registers under HKCR\WOW6432Node\CLSID\... Check both
-  # the 32-bit and 64-bit registry views.
-  OMNIRIG_GUID="{4FE359C5-A58F-459D-BE95-CA559FB4F270}"
+  # Check for OmniRig presence. JTDX's CMakeLists needs the typelib
+  # host file so it can generate a C++ wrapper for the OmniRig COM
+  # class. We prefer passing the file path directly via -DAXSERVER
+  # (works regardless of 32-bit/64-bit bitness), so the important
+  # check is that the .exe exists on disk — not that it's COM-registered.
   OMNIRIG_EXE="/c/Program Files (x86)/Afreet/OmniRig/OmniRig.exe"
-  OMNIRIG_REGISTERED=false
-  for key in \
-      "HKCR\\CLSID\\$OMNIRIG_GUID" \
-      "HKCR\\WOW6432Node\\CLSID\\$OMNIRIG_GUID" \
-      "HKLM\\SOFTWARE\\Classes\\CLSID\\$OMNIRIG_GUID" \
-      "HKLM\\SOFTWARE\\Classes\\WOW6432Node\\CLSID\\$OMNIRIG_GUID"; do
-    if reg.exe query "$key" >/dev/null 2>&1; then
-      OMNIRIG_REGISTERED=true
-      break
-    fi
-  done
-
-  if ! $OMNIRIG_REGISTERED; then
-    log "[WARN] OmniRig COM class not registered on this system."
-    log "       JTDX's CMakeLists will FAIL with 'You need to install OmniRig'."
+  if [ -f "$OMNIRIG_EXE" ]; then
+    log "OmniRig found at $OMNIRIG_EXE — will bypass COM registry lookup."
+  else
+    log "[WARN] OmniRig.exe not found on disk."
+    log "       JTDX needs the OmniRig typelib host to compile on Windows."
     log ""
-    if [ -f "$OMNIRIG_EXE" ]; then
-      log "       OmniRig files are present at:"
-      log "         C:\\Program Files (x86)\\Afreet\\OmniRig\\"
-      log "       but the COM server was not registered (installer likely"
-      log "       run without admin privileges)."
-      log ""
-      log "       Fix: open cmd as Administrator and run:"
-      log "         \"C:\\Program Files (x86)\\Afreet\\OmniRig\\OmniRig.exe\" /regserver"
-      log ""
-    else
-      log "       To install OmniRig:"
-      log "         1. Download from http://dxatlas.com/Download.asp"
-      log "            (Omni-Rig 1.20, freeware, ~1 MB)"
-      log "         2. Extract the zip and run setup.exe AS ADMINISTRATOR"
-      log "            (right-click setup.exe -> Run as administrator)."
-      log ""
-    fi
-    log "       Then re-run build.bat."
+    log "       To install OmniRig:"
+    log "         1. Download from http://dxatlas.com/Download.asp"
+    log "            (Omni-Rig 1.20, freeware, ~1 MB)"
+    log "         2. Extract the zip and run setup.exe (admin not required"
+    log "            for WKjTX — we bypass the COM registry)."
+    log "         3. Re-run build.bat."
     log ""
-    log "       Press Ctrl+C to abort, or Enter to continue anyway (build"
-    log "       will fail at the cmake step)."
+    log "       Press Ctrl+C to abort, or Enter to continue (cmake will fail)."
     read -r -p "> " _ignored
   fi
 fi
@@ -201,6 +174,18 @@ log "Configuring WKjTX..."
 mkdir -p "$WKJTX_BUILD"
 cd "$WKJTX_BUILD"
 
+# If OmniRig.exe is on disk, bypass dumpcpp's registry lookup by
+# passing the file path directly. This works around the 32-bit
+# OmniRig vs 64-bit dumpcpp bitness mismatch where the COM class is
+# registered in WOW6432Node but the 64-bit dumpcpp can't see it.
+CMAKE_EXTRA_ARGS=()
+if [ -f "$OMNIRIG_EXE" ]; then
+  # Convert POSIX path to CMake-friendly forward-slash Windows path.
+  OMNIRIG_EXE_CMAKE="C:/Program Files (x86)/Afreet/OmniRig/OmniRig.exe"
+  log "Passing OmniRig.exe path directly to CMake via -DAXSERVER"
+  CMAKE_EXTRA_ARGS+=("-DAXSERVER=${OMNIRIG_EXE_CMAKE}")
+fi
+
 # Always rerun CMake; it's cheap when the cache is up-to-date.
 cmake -G Ninja \
   -DCMAKE_BUILD_TYPE=Release \
@@ -208,6 +193,7 @@ cmake -G Ninja \
   -DCMAKE_INSTALL_PREFIX="$WKJTX_INSTALL" \
   -DWKJTX_BUILD_TESTS=ON \
   -DCMAKE_Fortran_FLAGS="-fallow-argument-mismatch" \
+  "${CMAKE_EXTRA_ARGS[@]}" \
   "$WKJTX_SRC"
 
 log "Building WKjTX (this takes 5-30 minutes on first run)..."

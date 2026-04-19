@@ -675,20 +675,34 @@ set_property (SOURCE ${all_C_and_CXXSRCS} APPEND_STRING PROPERTY COMPILE_FLAGS "
 set_property (SOURCE ${all_C_and_CXXSRCS} APPEND PROPERTY OBJECT_DEPENDS wsjtx_config.h)
 
 if (WIN32)
-  # generate the OmniRig COM interface source
-  find_program (DUMPCPP dumpcpp)
-  if (DUMPCPP-NOTFOUND)
-    message (FATAL_ERROR "dumpcpp tool not found")
-  endif (DUMPCPP-NOTFOUND)
-  execute_process (
-    COMMAND ${DUMPCPP} -getfile {4FE359C5-A58F-459D-BE95-CA559FB4F270}
-    OUTPUT_VARIABLE AXSERVER
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    )
-  string (STRIP "${AXSERVER}" AXSERVER)
+  # generate the OmniRig COM interface source.
+  #
+  # WKjTX patch: AXSERVER can be passed directly from the command line
+  # via -DAXSERVER="C:/path/to/OmniRig.exe". When set, we skip the
+  # registry-based `dumpcpp -getfile {CLSID}` lookup. This is needed on
+  # 64-bit Windows where OmniRig (32-bit) registers only in the
+  # WOW6432Node view, which 64-bit dumpcpp cannot see. Passing the
+  # typelib host file directly works regardless of bitness.
   if (NOT AXSERVER)
-    message (FATAL_ERROR "You need to install OmniRig on this computer")
-  endif (NOT AXSERVER)
+    find_program (DUMPCPP dumpcpp)
+    if (DUMPCPP-NOTFOUND)
+      message (FATAL_ERROR "dumpcpp tool not found")
+    endif (DUMPCPP-NOTFOUND)
+    execute_process (
+      COMMAND ${DUMPCPP} -getfile {4FE359C5-A58F-459D-BE95-CA559FB4F270}
+      OUTPUT_VARIABLE AXSERVER
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+      )
+    string (STRIP "${AXSERVER}" AXSERVER)
+    if (NOT AXSERVER)
+      message (FATAL_ERROR "You need to install OmniRig on this computer, "
+               "OR pass its path to cmake with "
+               "-DAXSERVER=\"C:/Program Files (x86)/Afreet/OmniRig/OmniRig.exe\" "
+               "(useful when 32-bit OmniRig is installed on 64-bit Windows).")
+    endif (NOT AXSERVER)
+  else ()
+    message (STATUS "Using AXSERVER supplied from command line: ${AXSERVER}")
+  endif ()
   string (REPLACE "\"" "" AXSERVER ${AXSERVER})
   file (TO_CMAKE_PATH ${AXSERVER} AXSERVERSRCS)
 endif (WIN32)
