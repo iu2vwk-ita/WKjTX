@@ -1216,19 +1216,24 @@ set_target_properties (wkjtx PROPERTIES
   )
 
 target_include_directories (wkjtx PRIVATE ${FFTW3_INCLUDE_DIRS})
-# WKjTX patch: static Hamlib needs Winsock2 symbols (send/recv/socket/
-# WSAStartup/WSAGetLastError/inet_pton/htons/...) explicitly linked
-# because its .la dependency info isn't consumed when we link the .a
-# directly via CMAKE_PREFIX_PATH. Also pull in iphlpapi (getaddrinfo
-# variants) and wsock32 (backcompat aliases used by WspiapiGetAddrInfo).
-set (WKJTX_WIN32_NET_LIBS)
-if (WIN32)
-  set (WKJTX_WIN32_NET_LIBS ws2_32 iphlpapi wsock32)
-endif ()
 if (APPLE)
   target_link_libraries (wkjtx Qt5::SerialPort wsjt_fort wsjt_cxx wsjt_qt wsjt_qtmm ${FFTW3_LIBRARIES})
 else (APPLE)
-  target_link_libraries (wkjtx Qt5::SerialPort wsjt_fort_omp wsjt_cxx wsjt_qt wsjt_qtmm ${FFTW3_LIBRARIES} ${WKJTX_WIN32_NET_LIBS})
+  target_link_libraries (wkjtx Qt5::SerialPort wsjt_fort_omp wsjt_cxx wsjt_qt wsjt_qtmm ${FFTW3_LIBRARIES})
+# WKjTX patch: static Hamlib needs Winsock2 symbols (send/recv/socket/
+# WSAStartup/WSAGetLastError/inet_pton/htons/WSAFDIsSet/gai_strerrorA/
+# WspiapiGetAddrInfo/WspiapiFreeAddrInfo/...) explicitly linked because
+# Hamlib's .la dependency info isn't consumed when we link the .a
+# directly via CMAKE_PREFIX_PATH.
+#
+# These MUST come AFTER libhamlib.a in the link line because GNU ld
+# resolves static libraries left-to-right. target_link_libraries puts
+# them BEFORE transitive deps, so we append via LINK_FLAGS instead —
+# which cmake drops at the end of the linker command.
+if (WIN32)
+  set_property (TARGET wkjtx APPEND_STRING PROPERTY
+    LINK_FLAGS " -lws2_32 -liphlpapi -lwsock32")
+endif ()
   if (OpenMP_C_FLAGS)
     set_target_properties (wkjtx PROPERTIES
       COMPILE_FLAGS "${OpenMP_C_FLAGS}"
