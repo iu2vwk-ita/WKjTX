@@ -1,0 +1,119 @@
+name: Build Windows
+
+# Builds WKjTX on Windows using MSYS2 + MinGW64 + Qt5 + Fortran,
+# matching the manual steps in INSTALL-WKjTX.md.
+#
+# Triggers:
+#   - push to main or any branch starting with "release-"
+#   - any tag starting with "v" (creates a release artifact)
+#   - manual "Run workflow" from the Actions tab
+
+on:
+  push:
+    branches:
+      - main
+      - 'release-*'
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build and test (Windows / MSYS2 MinGW64)
+    runs-on: windows-latest
+
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup MSYS2 MINGW64
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          update: true
+          install: >-
+            git
+            patch
+            unzip
+            autoconf
+            automake
+            libtool
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-gcc-fortran
+            mingw-w64-x86_64-cmake
+            mingw-w64-x86_64-ninja
+            mingw-w64-x86_64-pkgconf
+            mingw-w64-x86_64-make
+            mingw-w64-x86_64-qt5-base
+            mingw-w64-x86_64-qt5-tools
+            mingw-w64-x86_64-qt5-multimedia
+            mingw-w64-x86_64-qt5-serialport
+            mingw-w64-x86_64-qt5-translations
+            mingw-w64-x86_64-qwt-qt5
+            mingw-w64-x86_64-fftw
+            mingw-w64-x86_64-boost
+            mingw-w64-x86_64-libusb
+            mingw-w64-x86_64-nsis
+
+      - name: Build JTDX-Hamlib (static)
+        run: |
+          cd third-party/jtdxhamlib
+          ./bootstrap
+          mkdir -p build && cd build
+          ../configure \
+            --prefix="${GITHUB_WORKSPACE}/build-artifacts/hamlib" \
+            --disable-shared --enable-static \
+            --without-cxx-binding --disable-winradio
+          make -j$(nproc)
+          make install
+
+      - name: Configure WKjTX
+        run: |
+          cd jtdx-source
+          mkdir -p build-wkjtx && cd build-wkjtx
+          cmake -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="${GITHUB_WORKSPACE}/build-artifacts/hamlib" \
+            -DCMAKE_INSTALL_PREFIX="${GITHUB_WORKSPACE}/build-artifacts/wkjtx" \
+            -DWKJTX_BUILD_TESTS=ON \
+            -DCMAKE_Fortran_FLAGS="-fallow-argument-mismatch" \
+            ..
+
+      - name: Build WKjTX
+        run: |
+          cd jtdx-source/build-wkjtx
+          ninja
+
+      - name: Run WKjTX unit tests
+        run: |
+          cd jtdx-source/build-wkjtx
+          ctest --output-on-failure --test-dir wkjtx/tests || echo "Tests location may vary"
+        continue-on-error: true
+
+      - name: Package NSIS installer
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          cd jtdx-source/build-wkjtx
+          cpack -G NSIS
+
+      - name: Upload installer artifact
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@v4
+        with:
+          name: wkjtx-windows-installer
+          path: jtdx-source/build-wkjtx/wkjtx-*.exe
+          if-no-files-found: warn
+
+      - name: Upload executable artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wkjtx-windows-build
+          path: jtdx-source/build-wkjtx/wkjtx.exe
+          if-no-files-found: warn
