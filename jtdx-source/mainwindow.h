@@ -46,6 +46,17 @@ namespace Ui {
   class MainWindow;
 }
 
+// WKjTX subsystem forward declarations.
+namespace wkjtx {
+  class AutoCall;
+  class AutoCallBadge;
+  class NewDxccDetector;
+  class ZoneDetector;
+  class GridDetector;
+  class PrefixDetector;
+  class CallsignDetector;
+}
+
 class QProcessEnvironment;
 class QSettings;
 class QNetworkAccessManager;
@@ -389,6 +400,9 @@ private:
 private:
   void hideMenus (bool b);
   void createThemeMenu ();   // WKjTX: builds the "Tema" menu with 5 preset themes
+  void createAutoCallMenu (); // WKjTX: "File → Auto-call..." menu entry
+  void createAutoCallBadge (); // WKjTX: flashing badge in the status bar
+  void feedAutoCall (class DecodedText * decodedtext); // WKjTX: route decode to autocall
 
   JTDXDateTime * m_jtdxtime;
   QProcessEnvironment const& m_env;
@@ -399,6 +413,16 @@ private:
   QSettings * m_settings;
 
   QScopedPointer<Ui::MainWindow> ui;
+
+  // WKjTX auto-call subsystem. Raw pointers with this-parent ownership
+  // (Qt deletes via parent-child when MainWindow destructs).
+  wkjtx::AutoCall          * m_autoCall      {nullptr};
+  wkjtx::AutoCallBadge     * m_autoCallBadge {nullptr};
+  wkjtx::NewDxccDetector   * m_detDxcc       {nullptr};
+  wkjtx::ZoneDetector      * m_detZone       {nullptr};
+  wkjtx::GridDetector      * m_detGrid       {nullptr};
+  wkjtx::PrefixDetector    * m_detPrefix     {nullptr};
+  wkjtx::CallsignDetector  * m_detCall       {nullptr};
 
   // other windows
   Configuration m_config;

@@ -32,6 +32,8 @@ set (WKJTX_SOURCES
   ThemeManager.hpp
   AutoCallSettingsDialog.cpp
   AutoCallSettingsDialog.hpp
+  AutoCallBadge.cpp
+  AutoCallBadge.hpp
   detectors/Maidenhead.cpp
   detectors/Maidenhead.hpp
   detectors/ZoneTables.hpp

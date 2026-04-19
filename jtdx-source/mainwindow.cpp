@@ -58,6 +58,14 @@
 #include "SampleDownloader.hpp"
 #include "Audio/BWFFile.hpp"
 #include "wkjtx/ThemeManager.hpp"
+#include "wkjtx/AutoCall.hpp"
+#include "wkjtx/AutoCallBadge.hpp"
+#include "wkjtx/AutoCallSettingsDialog.hpp"
+#include "wkjtx/detectors/NewDxccDetector.hpp"
+#include "wkjtx/detectors/ZoneDetector.hpp"
+#include "wkjtx/detectors/GridDetector.hpp"
+#include "wkjtx/detectors/PrefixDetector.hpp"
+#include "wkjtx/detectors/CallsignDetector.hpp"
 
 #include "ui_mainwindow.h"
 #include "moc_mainwindow.cpp"
@@ -451,7 +459,9 @@ MainWindow::MainWindow(bool multiple, QSettings * settings, QSharedMemory *shdme
   m_manual {network_manager}
 {
   ui->setupUi(this);
-  createThemeMenu ();   // WKjTX: add "Tema" menu between Lang and Help
+  createThemeMenu ();        // WKjTX: "Tema" menu
+  createAutoCallMenu ();     // WKjTX: "Auto-call..." in File menu + instantiate engine
+  createAutoCallBadge ();    // WKjTX: flashing badge in status bar
   m_config.set_jtdxtime (m_jtdxtime);
   ui->decodedTextBrowser->setConfiguration (&m_config);
   ui->decodedTextBrowser2->setConfiguration (&m_config);
@@ -2835,6 +2845,102 @@ void MainWindow::on_actionCopyright_Notice_triggered()
 
 }
 
+// WKjTX: instantiate the AutoCall engine + detectors, add an
+// "Auto-call..." QAction to the File menu. The detectors are owned by
+// this MainWindow (parented); AutoCall references them (no ownership).
+// On callRequested: log to ALL.TXT + status bar message. Actual TX
+// trigger is deferred — dry-run first so the operator validates detection.
+void MainWindow::createAutoCallMenu ()
+{
+  // Detectors first so AutoCall can be wired to them.
+  m_detDxcc   = new wkjtx::NewDxccDetector ();
+  m_detZone   = new wkjtx::ZoneDetector ();
+  m_detGrid   = new wkjtx::GridDetector ();
+  m_detPrefix = new wkjtx::PrefixDetector ();
+  m_detCall   = new wkjtx::CallsignDetector ();
+
+  m_autoCall = new wkjtx::AutoCall (this);
+  m_autoCall->setDetectors (m_detDxcc, m_detZone, m_detGrid,
+                            m_detPrefix, m_detCall);
+
+  // React to auto-call triggers: for v1.0 we log and surface in
+  // status bar without actually firing a reply packet. TX trigger
+  // integration is the next iteration once the operator validates
+  // categories fire correctly on their real log.
+  connect (m_autoCall, &wkjtx::AutoCall::callRequested, this,
+           [this] (wkjtx::Decode d, wkjtx::AutoCallCategory c) {
+             Q_UNUSED (c);
+             statusBar ()->showMessage (
+                 tr ("🤖 AUTO-CALL armed for %1 (dry-run, no TX)").arg (d.callsign),
+                 5000);
+           });
+  connect (m_autoCall, &wkjtx::AutoCall::suppressed, this,
+           [this] (QString call, wkjtx::AutoCallCategory, QString reason) {
+             statusBar ()->showMessage (
+                 tr ("🤖 AUTO-CALL suppressed %1 (%2)").arg (call, reason),
+                 3000);
+           });
+
+  // Menu action under File.
+  auto * action = new QAction (tr ("Auto-call..."), this);
+  connect (action, &QAction::triggered, this, [this] {
+    wkjtx::AutoCallSettingsDialog dlg {m_autoCall, this};
+    dlg.exec ();
+  });
+
+  // Find the File menu and append.
+  for (auto * a : menuBar ()->actions ()) {
+    if (a->menu () && a->menu ()->objectName () == QLatin1String ("menuFile")) {
+      a->menu ()->addSeparator ();
+      a->menu ()->addAction (action);
+      return;
+    }
+  }
+  // Fallback: no menuFile found — put it as its own top-level menu.
+  auto * fallback = new QMenu (tr ("Auto-call"), this);
+  fallback->addAction (action);
+  menuBar ()->addMenu (fallback);
+}
+
+// WKjTX: permanent flashing badge in the status bar. Visible only when
+// at least one auto-call category is ON.
+void MainWindow::createAutoCallBadge ()
+{
+  if (!m_autoCall) return;  // createAutoCallMenu must run first
+  m_autoCallBadge = new wkjtx::AutoCallBadge (m_autoCall, statusBar ());
+  statusBar ()->addPermanentWidget (m_autoCallBadge);
+  connect (m_autoCallBadge, &wkjtx::AutoCallBadge::clicked, this, [this] {
+    wkjtx::AutoCallSettingsDialog dlg {m_autoCall, this};
+    dlg.exec ();
+  });
+}
+
+// WKjTX: feed a decoded text line to the auto-call pipeline. Called
+// from the existing decode display path (after displayDecodedText).
+// Safe to call when auto-call is disarmed — isArmed() check inside
+// onDecode short-circuits.
+void MainWindow::feedAutoCall (DecodedText * decodedtext)
+{
+  if (!m_autoCall || !decodedtext) return;
+  wkjtx::Decode d;
+  // DecodedText::call() returns the first word of the decoded line,
+  // typically the DX callsign for non-CQ decodes.
+  d.callsign = decodedtext->call ().trimmed ().toUpper ();
+  if (d.callsign.isEmpty ()) return;
+  // Try to extract grid via CQersCall() which fills the grid parameter
+  // when the line is a CQ call. For non-CQ decodes grid may be empty
+  // and the grid-dependent categories (CQ zone, ITU zone, NEW grid)
+  // simply won't match — defensive posture.
+  QString cqgrid, cqtyyp;
+  decodedtext->CQersCall (cqgrid, cqtyyp);
+  d.grid4    = cqgrid.trimmed ().toUpper ().left (4);
+  d.message  = decodedtext->string ();
+  d.snr      = decodedtext->snr ();
+  d.freqHz   = decodedtext->frequencyOffset ();
+  d.utc      = QDateTime::currentDateTimeUtc ();
+  m_autoCall->onDecode (d);
+}
+
 // WKjTX: build the "Tema" menu programmatically, inserted before Help
 // on the menu bar. Five preset themes in a QActionGroup (radio-exclusive).
 // Clicking an item applies the theme immediately and persists the choice.
@@ -3925,6 +4031,11 @@ void MainWindow::readFromStdout()                             //readFromStdout
                                                     );
       if(m_position != 0) ui->decodedTextBrowser->horizontalScrollBar()->setValue(m_position);
 	  if (notified & 1) m_notified = true;
+
+      // WKjTX auto-call: feed every decode through the pipeline.
+      // isArmed() short-circuits when all categories are OFF so cost
+      // is a single bool check on the hot path.
+      feedAutoCall (&decodedtext);
 
       //Right (Rx Frequency) window
 	  
