@@ -110,24 +110,52 @@ if [ "$MODE" = "full" ]; then
   fi
 
   # Check for OmniRig COM registration (Windows-only runtime dep).
-  # JTDX's CMakeLists uses Qt's dumpcpp to generate a C++ wrapper
-  # from the OmniRig COM class at build time. If OmniRig isn't
-  # registered, `dumpcpp -getfile {GUID}` returns empty and cmake
-  # errors with "You need to install OmniRig on this computer".
-  OMNIRIG_KEY="HKCR\\CLSID\\{4FE359C5-A58F-459D-BE95-CA559FB4F270}"
-  if ! reg.exe query "$OMNIRIG_KEY" >/dev/null 2>&1; then
+  # JTDX's CMakeLists uses Qt's dumpcpp to generate a C++ wrapper from
+  # the OmniRig COM class at build time. If OmniRig isn't registered,
+  # `dumpcpp -getfile {GUID}` returns empty and cmake errors out.
+  #
+  # OmniRig is a 32-bit COM local server (OmniRig.exe). On 64-bit
+  # Windows it registers under HKCR\WOW6432Node\CLSID\... Check both
+  # the 32-bit and 64-bit registry views.
+  OMNIRIG_GUID="{4FE359C5-A58F-459D-BE95-CA559FB4F270}"
+  OMNIRIG_EXE="/c/Program Files (x86)/Afreet/OmniRig/OmniRig.exe"
+  OMNIRIG_REGISTERED=false
+  for key in \
+      "HKCR\\CLSID\\$OMNIRIG_GUID" \
+      "HKCR\\WOW6432Node\\CLSID\\$OMNIRIG_GUID" \
+      "HKLM\\SOFTWARE\\Classes\\CLSID\\$OMNIRIG_GUID" \
+      "HKLM\\SOFTWARE\\Classes\\WOW6432Node\\CLSID\\$OMNIRIG_GUID"; do
+    if reg.exe query "$key" >/dev/null 2>&1; then
+      OMNIRIG_REGISTERED=true
+      break
+    fi
+  done
+
+  if ! $OMNIRIG_REGISTERED; then
     log "[WARN] OmniRig COM class not registered on this system."
     log "       JTDX's CMakeLists will FAIL with 'You need to install OmniRig'."
     log ""
-    log "       To fix:"
-    log "         1. Download from http://dxatlas.com/Download.asp"
-    log "            (Omni-Rig 1.20, freeware, ~1 MB)"
-    log "         2. Extract the zip and run setup.exe (accept defaults)."
-    log "         3. Re-run build.bat"
+    if [ -f "$OMNIRIG_EXE" ]; then
+      log "       OmniRig files are present at:"
+      log "         C:\\Program Files (x86)\\Afreet\\OmniRig\\"
+      log "       but the COM server was not registered (installer likely"
+      log "       run without admin privileges)."
+      log ""
+      log "       Fix: open cmd as Administrator and run:"
+      log "         \"C:\\Program Files (x86)\\Afreet\\OmniRig\\OmniRig.exe\" /regserver"
+      log ""
+    else
+      log "       To install OmniRig:"
+      log "         1. Download from http://dxatlas.com/Download.asp"
+      log "            (Omni-Rig 1.20, freeware, ~1 MB)"
+      log "         2. Extract the zip and run setup.exe AS ADMINISTRATOR"
+      log "            (right-click setup.exe -> Run as administrator)."
+      log ""
+    fi
+    log "       Then re-run build.bat."
     log ""
     log "       Press Ctrl+C to abort, or Enter to continue anyway (build"
-    log "       will fail at the cmake step, but this lets you see for"
-    log "       yourself)."
+    log "       will fail at the cmake step)."
     read -r -p "> " _ignored
   fi
 fi

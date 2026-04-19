@@ -21,8 +21,21 @@ from it. Without OmniRig, cmake aborts with
 
 1. Go to <http://dxatlas.com/Download.asp>.
 2. Download **Omni-Rig 1.20** (a ~1 MB ZIP).
-3. Extract it and run `setup.exe`. Accept default settings.
+3. Extract it and **right-click `setup.exe` → Run as administrator**.
+   Accept default settings. The "Run as administrator" step is
+   essential — without admin, the installer copies files but fails
+   silently to register the COM server in `HKLM`, and the WKjTX
+   build will still fail.
 4. Done — OmniRig registers itself with Windows automatically.
+
+If you already ran the installer without admin, recover with:
+
+```
+# Open cmd as Administrator, then:
+"C:\Program Files (x86)\Afreet\OmniRig\OmniRig.exe" /regserver
+```
+
+This registers the COM server without a reinstall.
 
 You do not have to use OmniRig at runtime (Hamlib is the alternative
 and more commonly used). But its COM registration must exist for the
