@@ -1,6 +1,7 @@
 build/
 build-*/
 jtdx-source/share/wkjtx/
+jtdx-source/wkjtx/icons/wkjtx_*.png
 *.o
 *.a
 *.exe

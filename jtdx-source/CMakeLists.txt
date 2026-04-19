@@ -654,7 +654,7 @@ if (APPLE)
     COMMENT "Building Icons"
     )
 else ()
-  set (WSJTX_ICON_FILE icons/windows-icons/jtdx.ico)
+  set (WSJTX_ICON_FILE icons/windows-icons/wkjtx.ico)
 endif (APPLE)
 
 set_source_files_properties (${WSJTX_ICON_FILE} PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
