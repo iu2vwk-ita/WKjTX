@@ -17,8 +17,21 @@ MODE="${1:-full}"
 cd "$(dirname "$0")/.."
 ROOT="$(pwd)"
 
+# IMPORTANT: autotools/libtool inside jtdxhamlib does not properly escape
+# paths that contain spaces, and the project root "Claude Local" has a
+# space in it. Installing Hamlib under the project root reliably breaks
+# with "/usr/bin/install: target '...' is not a directory" because the
+# space splits the argument.
+#
+# Workaround: install Hamlib into a fixed no-space path. WKjTX's CMake
+# finds it via CMAKE_PREFIX_PATH; the Hamlib location is an internal
+# build detail — not visible to the end user or the WKjTX source tree.
+#
+# CMake itself handles spaces fine, so the WKjTX binary and installer
+# can stay under the spaced project root.
+HAMLIB_NOSPACE_ROOT="/c/wkjtx-build"
 HAMLIB_SRC="$ROOT/third-party/jtdxhamlib"
-HAMLIB_PREFIX="$ROOT/build-artifacts/hamlib"
+HAMLIB_PREFIX="$HAMLIB_NOSPACE_ROOT/hamlib"
 WKJTX_SRC="$ROOT/jtdx-source"
 WKJTX_BUILD="$WKJTX_SRC/build-wkjtx"
 WKJTX_INSTALL="$ROOT/build-artifacts/wkjtx"
@@ -30,6 +43,8 @@ fail () { printf "\n[build][ERROR] %s\n" "$*" >&2; exit 1; }
 if [ "$MODE" = "clean" ]; then
   log "Wiping build directories..."
   rm -rf "$WKJTX_BUILD" "$HAMLIB_SRC/build" "$HAMLIB_PREFIX" "$WKJTX_INSTALL"
+  # Also remove the old in-tree hamlib dir from pre-fix runs, if any.
+  rm -rf "$ROOT/build-artifacts/hamlib"
   log "Clean done — falling through to full build."
   MODE="full"
 fi
@@ -98,7 +113,21 @@ fi
 # ------------------------------------------------------------- hamlib
 if [ "$MODE" = "full" ]; then
   if [ ! -f "$HAMLIB_PREFIX/lib/libhamlib.a" ]; then
-    log "Building JTDX-Hamlib (static)..."
+    log "Building JTDX-Hamlib (static) → $HAMLIB_PREFIX"
+
+    # Ensure the no-space install root exists.
+    mkdir -p "$HAMLIB_NOSPACE_ROOT"
+
+    # If a previous run left a build dir with the old bad --prefix cached
+    # in its Makefile, wipe it before reconfiguring. Fresh configure each
+    # time the install prefix is (re)established.
+    if [ -f "$HAMLIB_SRC/build/Makefile" ]; then
+      if ! grep -q "prefix = $HAMLIB_PREFIX" "$HAMLIB_SRC/build/Makefile" 2>/dev/null; then
+        log "Build dir has stale prefix — wiping $HAMLIB_SRC/build..."
+        rm -rf "$HAMLIB_SRC/build"
+      fi
+    fi
+
     cd "$HAMLIB_SRC"
     if [ ! -f configure ]; then
       ./bootstrap
