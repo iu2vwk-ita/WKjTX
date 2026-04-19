@@ -229,6 +229,20 @@ if [ $NINJA_RC -ne 0 ]; then
   exit $NINJA_RC
 fi
 
+# Stage runtime data files into the directory the binary expects at
+# launch time (same layout `ninja install` would produce, but in-place
+# so the user can run wkjtx.exe directly from the build dir).
+SHARE_DIR="$WKJTX_SRC/share/wkjtx"
+log "Staging runtime data files into $SHARE_DIR ..."
+mkdir -p "$SHARE_DIR"
+for f in cty.dat cty.dat_copyright.txt; do
+  [ -f "$WKJTX_SRC/$f" ] && cp -n "$WKJTX_SRC/$f" "$SHARE_DIR/"
+done
+for f in ALLCALL7.TXT CALL3.TXT; do
+  [ -f "$WKJTX_SRC/contrib/CallDB/$f" ] && cp -n "$WKJTX_SRC/contrib/CallDB/$f" "$SHARE_DIR/"
+done
+[ -f "$WKJTX_SRC/contrib/Ephemeris/JPLEPH" ] && cp -n "$WKJTX_SRC/contrib/Ephemeris/JPLEPH" "$SHARE_DIR/"
+
 # ------------------------------------------------------------- tests
 log "Running unit tests..."
 if [ -d wkjtx/tests ]; then
