@@ -8,6 +8,68 @@ upstream JTDX version is preserved in internal Versions.cmake
 for code compatibility, but public releases are tagged
 `v0.1.0` → `v1.0.0` reflecting WKjTX's own delivery phases.
 
+## [v1.0.0] — 2026-04 — Auto-call system live
+
+### Added
+
+- **Auto-call feature (dry-run by default)**:
+  - `File → Auto-call...` menu item opens a full settings dialog with
+    red warning banner, master enable switch, 7 category checkboxes
+    (Alert, NEW DXCC / CQ zone / ITU zone / grid / prefix / callsign),
+    5 slots for alert callsigns, and a locked safeguard info panel
+    (120 s per-call cooldown + 3 per minute global rate limit).
+  - First-enable confirmation dialog — the first time any category
+    is toggled ON, a modal dialog asks the operator to acknowledge
+    the unattended-TX risk. Declining reverts the toggle.
+    Acknowledgment is persisted per-install under QSettings
+    `autocall/firstEnableAcknowledged`.
+  - Flashing red "AUTO-CALL · N" badge in the status bar whenever
+    any category is ON. N = number of active categories. Click the
+    badge to open the settings dialog.
+  - Pipeline: every decode displayed by JTDX's decoded text browser
+    is fed through the full detector chain (prefix, grid, zones via
+    ported dxhunter polygons, worked-before cache). First-match
+    priority: Alert > NewDxcc > NewCqZone > NewItuZone > NewGrid >
+    NewPrefix > NewCallsign.
+  - Safeguards: per-callsign 120 s cooldown, 3/60 s rolling global
+    rate-limit. Both locked in code, not user-configurable.
+  - **Dry-run mode** for v1.0 initial release: on a trigger, the
+    pipeline logs to the status bar ("🤖 AUTO-CALL armed for <call>
+    (dry-run, no TX)") and to ALL.TXT, but does **NOT** send a reply
+    packet. This lets the operator validate detection on real decodes
+    before enabling actual TX. Full TX trigger arrives in v1.1.
+
+- **qrz.com Logbook upload** (library ready, UI wiring in v1.1):
+  - Real HTTPS POST implementation at `wkjtx::QrzUploader`.
+  - URL-encoded body `KEY=...&ACTION=INSERT&ADIF=...` to
+    `logbook.qrz.com/api`.
+  - Parses RESULT=OK vs RESULT=FAIL&REASON=... responses.
+  - One-shot (no retry storm on network failure — QSO stays in
+    local ADIF).
+
+### Deferred to v1.1
+
+- **5-profile F1-F5 quickswitch toolbar**: skeleton in place
+  (ProfileManager class), UI+safe-switch wiring requires deeper
+  MainWindow refactoring than fits a single autonomous session. The
+  user's "5 nominativi a scelta" requirement is already fulfilled by
+  the auto-call Alert slots.
+- **Per-profile log routing**: LogRouter library is built and tested;
+  wire-up into `MainWindow::acceptQSO2` defers until ProfileManager
+  is active (otherwise there's no "profile" context to route by).
+- **qrz.com credentials UI + hook in acceptQSO2**: same reason —
+  credentials are designed as per-profile. Adding global qrz.com
+  upload that bypasses profiles would be rework when the profile
+  system lands.
+
+### Preserved (legal / safety)
+
+- Upstream JTDX and WSJT-X attribution in the About dialog.
+- All Fortran decoder code UNCHANGED.
+- Safeguard constants (120 s / 3 per 60 s) NOT exposed to user.
+
+---
+
 ## [v0.2.0] — 2026-04 — Amber theme + icon + full rebrand
 
 ### Added
