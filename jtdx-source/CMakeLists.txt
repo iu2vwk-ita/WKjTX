@@ -1216,10 +1216,19 @@ set_target_properties (wkjtx PROPERTIES
   )
 
 target_include_directories (wkjtx PRIVATE ${FFTW3_INCLUDE_DIRS})
+# WKjTX patch: static Hamlib needs Winsock2 symbols (send/recv/socket/
+# WSAStartup/WSAGetLastError/inet_pton/htons/...) explicitly linked
+# because its .la dependency info isn't consumed when we link the .a
+# directly via CMAKE_PREFIX_PATH. Also pull in iphlpapi (getaddrinfo
+# variants) and wsock32 (backcompat aliases used by WspiapiGetAddrInfo).
+set (WKJTX_WIN32_NET_LIBS)
+if (WIN32)
+  set (WKJTX_WIN32_NET_LIBS ws2_32 iphlpapi wsock32)
+endif ()
 if (APPLE)
   target_link_libraries (wkjtx Qt5::SerialPort wsjt_fort wsjt_cxx wsjt_qt wsjt_qtmm ${FFTW3_LIBRARIES})
 else (APPLE)
-  target_link_libraries (wkjtx Qt5::SerialPort wsjt_fort_omp wsjt_cxx wsjt_qt wsjt_qtmm ${FFTW3_LIBRARIES})
+  target_link_libraries (wkjtx Qt5::SerialPort wsjt_fort_omp wsjt_cxx wsjt_qt wsjt_qtmm ${FFTW3_LIBRARIES} ${WKJTX_WIN32_NET_LIBS})
   if (OpenMP_C_FLAGS)
     set_target_properties (wkjtx PROPERTIES
       COMPILE_FLAGS "${OpenMP_C_FLAGS}"
