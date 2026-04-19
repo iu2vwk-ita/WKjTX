@@ -119,7 +119,9 @@ int main(int argc, char *argv[])
                                    // that GUI has correct l18n
 
       // Override programs executable basename as application name.
-      a.setApplicationName ("JTDX");
+      a.setApplicationName ("WKjTX");
+      a.setOrganizationName ("WKjTX");
+      a.setOrganizationDomain ("wkjtx.local");
       a.setApplicationVersion (version ());
   if (version().replace("_32A","").indexOf("_") > 1) {
     #include <QDate>

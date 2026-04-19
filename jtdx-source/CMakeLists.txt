@@ -22,7 +22,7 @@ Change this to the newest SDK available that you can install on your system (>10
 Do not override this if you intend to build an official deployable installer.")
 endif (APPLE)
 
-project (jtdx C CXX Fortran)
+project (wkjtx C CXX Fortran)
 
 #
 # CMake policies
@@ -49,7 +49,7 @@ message (STATUS "Building ${CMAKE_PROJECT_NAME}-${wsjtx_VERSION}")
 #
 # project information
 #
-set (PROJECT_NAME "JTDX")
+set (PROJECT_NAME "WKjTX")
 if (WIN32)
   set (PROJECT_VENDOR "Igor Chernikov, UA3DJY and Arvo Jarve, ES1JA")
   set (PROJECT_CONTACT "Igor Chernikov <c_igor@inbox.ru>, Arvo Jarve <arvo.jarve@eesti.ee>")
@@ -65,7 +65,7 @@ set (PROJECT_MANUAL_DIRECTORY_URL http://sourceforge.net/projects/jtdx/)
 set (PROJECT_SAMPLES_URL http://jtdx.tech/public_html/downloads/)
 set (PROJECT_SAMPLES_UPLOAD_DEST frs.sourceforge.net:/home/frs/project/wsjt/)
 set (PROJECT_SUMMARY_DESCRIPTION "${PROJECT_NAME} - Digital Modes for Amateur Radio.")
-set (PROJECT_DESCRIPTION "JTDX: Digital Modes for Weak Signal Communications in Amateur Radio")
+set (PROJECT_DESCRIPTION "WKjTX: Digital Modes for Weak Signal Communications in Amateur Radio (JTDX fork)")
 #set (CMAKE_PROJECT_DESCRIPTION ${PROJECT_DESCRIPTION})
 
 set (CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/CMake/Modules ${CMAKE_MODULE_PATH})
@@ -1176,7 +1176,7 @@ generate_version_info (jtdx_VERSION_RESOURCES
   ICON ${WSJTX_ICON_FILE}
   )
 
-add_executable (jtdx MACOSX_BUNDLE
+add_executable (wkjtx MACOSX_BUNDLE
   ${wsjtx_CXXSRCS}
   ${wsjtx_GENUISRCS}
   jtdx.rc
@@ -1186,10 +1186,10 @@ add_executable (jtdx MACOSX_BUNDLE
   )
 
 if (WSJT_CREATE_WINMAIN)
-  set_target_properties (jtdx PROPERTIES WIN32_EXECUTABLE ON)
+  set_target_properties (wkjtx PROPERTIES WIN32_EXECUTABLE ON)
 endif (WSJT_CREATE_WINMAIN)
 
-set_target_properties (jtdx PROPERTIES
+set_target_properties (wkjtx PROPERTIES
   MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/Darwin/Info.plist.in"
   MACOSX_BUNDLE_INFO_STRING "${WSJTX_DESCRIPTION_SUMMARY}"
   MACOSX_BUNDLE_ICON_FILE "${WSJTX_ICON_FILE}"
@@ -1202,22 +1202,22 @@ set_target_properties (jtdx PROPERTIES
   MACOSX_BUNDLE_GUI_IDENTIFIER "tech.jtdx"
   )
 
-target_include_directories (jtdx PRIVATE ${FFTW3_INCLUDE_DIRS})
+target_include_directories (wkjtx PRIVATE ${FFTW3_INCLUDE_DIRS})
 if (APPLE)
-  target_link_libraries (jtdx Qt5::SerialPort wsjt_fort wsjt_cxx wsjt_qt wsjt_qtmm ${FFTW3_LIBRARIES})
+  target_link_libraries (wkjtx Qt5::SerialPort wsjt_fort wsjt_cxx wsjt_qt wsjt_qtmm ${FFTW3_LIBRARIES})
 else (APPLE)
-  target_link_libraries (jtdx Qt5::SerialPort wsjt_fort_omp wsjt_cxx wsjt_qt wsjt_qtmm ${FFTW3_LIBRARIES})
+  target_link_libraries (wkjtx Qt5::SerialPort wsjt_fort_omp wsjt_cxx wsjt_qt wsjt_qtmm ${FFTW3_LIBRARIES})
   if (OpenMP_C_FLAGS)
-    set_target_properties (jtdx PROPERTIES
+    set_target_properties (wkjtx PROPERTIES
       COMPILE_FLAGS "${OpenMP_C_FLAGS}"
       LINK_FLAGS "${OpenMP_C_FLAGS}"
       )
   endif (OpenMP_C_FLAGS)
-  set_target_properties (jtdx PROPERTIES
+  set_target_properties (wkjtx PROPERTIES
     Fortran_MODULE_DIRECTORY ${CMAKE_BINARY_DIR}/fortran_modules_omp
     )
   if (WIN32)
-    set_target_properties (jtdx PROPERTIES
+    set_target_properties (wkjtx PROPERTIES
       LINK_FLAGS -Wl,--stack,16777216
       )
   endif ()
@@ -1268,7 +1268,7 @@ endif (UNIX)
 #
 # installation
 #
-install (TARGETS jtdx
+install (TARGETS wkjtx
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR} COMPONENT runtime
   BUNDLE DESTINATION . COMPONENT runtime
   )
