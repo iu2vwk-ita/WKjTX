@@ -86,6 +86,7 @@ jobs:
             -DCMAKE_PREFIX_PATH="${GITHUB_WORKSPACE}/build-artifacts/hamlib" \
             -DCMAKE_INSTALL_PREFIX="${GITHUB_WORKSPACE}/build-artifacts/wkjtx" \
             -DWKJTX_BUILD_TESTS=ON \
+            -DWSJT_GENERATE_DOCS=OFF \
             -DCMAKE_Fortran_FLAGS="-fallow-argument-mismatch" \
             ..
 

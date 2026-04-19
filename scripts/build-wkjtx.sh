@@ -190,11 +190,15 @@ if [ -f "$OMNIRIG_EXE" ]; then
 fi
 
 # Always rerun CMake; it's cheap when the cache is up-to-date.
+# WSJT_GENERATE_DOCS=OFF skips the asciidoctor-based manual generation;
+# the manual is a Ruby/asciidoctor dep that's not worth pulling in for
+# an internal build. Shipping docs are maintained separately in USER-GUIDE.md.
 cmake -G Ninja \
   -DCMAKE_BUILD_TYPE=Release \
   -DCMAKE_PREFIX_PATH="$HAMLIB_PREFIX" \
   -DCMAKE_INSTALL_PREFIX="$WKJTX_INSTALL" \
   -DWKJTX_BUILD_TESTS=ON \
+  -DWSJT_GENERATE_DOCS=OFF \
   -DCMAKE_Fortran_FLAGS="-fallow-argument-mismatch" \
   "${CMAKE_EXTRA_ARGS[@]}" \
   "$WKJTX_SRC"
