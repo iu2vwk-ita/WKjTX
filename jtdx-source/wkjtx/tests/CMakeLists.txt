@@ -23,9 +23,17 @@ macro (wkjtx_add_test name)
   add_test (NAME ${name} COMMAND ${name})
 endmacro ()
 
-# test_autocall_safeguards — constants lock, no external deps
+# test_autocall_safeguards — constants lock, links full detector
+# set because AutoCall.cpp references detector methods via injected
+# pointers even when the test uses a default-constructed AutoCall.
 wkjtx_add_test (test_autocall_safeguards
   ../AutoCall.cpp
+  ../detectors/GridDetector.cpp
+  ../detectors/PrefixDetector.cpp
+  ../detectors/ZoneDetector.cpp
+  ../detectors/NewDxccDetector.cpp
+  ../detectors/CallsignDetector.cpp
+  ../detectors/Maidenhead.cpp
 )
 
 # test_grid_detector — 4-char Maidenhead regex + mark/query

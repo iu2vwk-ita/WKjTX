@@ -3,6 +3,7 @@
 
 #include "../LogRouter.hpp"
 #include <QTest>
+#include <QSignalSpy>
 #include <QTemporaryDir>
 #include <QFile>
 
