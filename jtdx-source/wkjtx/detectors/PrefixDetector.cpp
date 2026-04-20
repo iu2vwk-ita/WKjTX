@@ -23,6 +23,28 @@ QSet<QString> const & dxPrefixes ()
   return set;
 }
 
+// Known operational-status qualifiers that appear on the RIGHT side
+// of a slash. Match these explicitly — anything else on the right is
+// treated as a DX-visit host prefix. A length-based heuristic (e.g.
+// "right.size() <= 3") mis-categorizes "VE3" / "KH6" as qualifiers.
+QSet<QString> const & qualifiers ()
+{
+  static QSet<QString> const set = {
+    "P",    // portable
+    "M",    // mobile
+    "MM",   // maritime mobile
+    "AM",   // aeronautical mobile
+    "A",    // alternate (less common)
+    "QRP",  // low power
+    "QRO",  // high power
+    "QRPP", // very low power
+    "OPS",  // club operator
+    "LH",   // lighthouse
+    "POR"   // Portuguese variant of /P, rare
+  };
+  return set;
+}
+
 } // namespace
 
 PrefixDetector::PrefixDetector () = default;
@@ -49,18 +71,21 @@ QString PrefixDetector::prefixFromCallsign (QString const & callsign)
   if (callsign.isEmpty ()) return {};
   QString c = callsign.toUpper ().trimmed ();
 
-  // Handle slash: DX prefix is on the left for known DX calls, otherwise
-  // short right-side qualifiers (/P /M /MM /AM /QRP) mean "use the left";
-  // anything else means "use the right" (a DX op roaming with their
-  // home call as prefix, like "JA1ABC/VE3").
+  // Handle slash:
+  //   1. DX_PREFIX/BASE_CALL (e.g. "KH6/W1AW") → left wins if the left
+  //      is in the known DX-prefix set.
+  //   2. BASE_CALL/QUALIFIER (e.g. "IU2VWK/P") → left wins if the right
+  //      is in the known qualifier set.
+  //   3. BASE_CALL/HOST_PREFIX (e.g. "JA1ABC/VE3") → right wins; the
+  //      operator is roaming, the host-nation prefix is the active
+  //      operating identity.
   int const slash = c.indexOf ('/');
   if (slash >= 0) {
     QString const left  = c.left (slash);
     QString const right = c.mid (slash + 1);
     if (dxPrefixes ().contains (left)) {
       c = left;
-    } else if (right.size () <= 3) {
-      // Short right side = qualifier (/P /M /MM /QRP etc.), keep left.
+    } else if (qualifiers ().contains (right)) {
       c = left;
     } else {
       c = right;
