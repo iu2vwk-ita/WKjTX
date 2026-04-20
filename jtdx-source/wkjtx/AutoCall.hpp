@@ -54,6 +54,14 @@ enum class AutoCallCategory
   NewCallsign
 };
 
+// Qt's QHash needs an ADL-found qHash overload for enum class keys.
+// C++11 strongly-typed enums are not implicitly convertible to int, so
+// the built-in qHash(int) overload isn't picked up. Provide one.
+inline uint qHash (AutoCallCategory c, uint seed = 0) noexcept
+{
+  return ::qHash (static_cast<int> (c), seed);
+}
+
 // The minimum info a detector needs from the decoder.
 struct Decode
 {
