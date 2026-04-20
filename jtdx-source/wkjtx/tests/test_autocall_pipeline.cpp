@@ -36,7 +36,7 @@ private slots:
     wkjtx::AutoCallConfig cfg;
     cfg.masterEnable = true;
     cfg.categoryEnabled[wkjtx::AutoCallCategory::Alert] = true;
-    cfg.alertCallsigns = {"K1ABC", "DL1XYZ"};
+    cfg.alertCallsigns = QStringList {"K1ABC", "DL1XYZ"};
     ac.setConfig (cfg);
 
     wkjtx::Decode d;
@@ -53,7 +53,7 @@ private slots:
     wkjtx::AutoCallConfig cfg;
     cfg.masterEnable = true;
     cfg.categoryEnabled[wkjtx::AutoCallCategory::Alert] = true;
-    cfg.alertCallsigns = {"K1ABC"};
+    cfg.alertCallsigns = QStringList {"K1ABC"};
     ac.setConfig (cfg);
 
     wkjtx::Decode d;
@@ -100,7 +100,7 @@ private slots:
     wkjtx::AutoCallConfig cfg;
     cfg.masterEnable = true;
     cfg.categoryEnabled[wkjtx::AutoCallCategory::Alert] = true;
-    cfg.alertCallsigns = {"AA1A", "BB2B", "CC3C", "DD4D"};
+    cfg.alertCallsigns = QStringList {"AA1A", "BB2B", "CC3C", "DD4D"};
     ac.setConfig (cfg);
 
     QSignalSpy fire {&ac, &wkjtx::AutoCall::callRequested};
@@ -128,7 +128,7 @@ private slots:
     cfg.masterEnable = true;
     cfg.categoryEnabled[wkjtx::AutoCallCategory::Alert]   = true;
     cfg.categoryEnabled[wkjtx::AutoCallCategory::NewGrid] = true;
-    cfg.alertCallsigns = {"K1ABC"};
+    cfg.alertCallsigns = QStringList {"K1ABC"};
     ac.setConfig (cfg);
 
     wkjtx::Decode d;
@@ -153,7 +153,7 @@ private slots:
     wkjtx::AutoCallConfig cfg;
     cfg.masterEnable = true;
     cfg.categoryEnabled[wkjtx::AutoCallCategory::Alert] = true;
-    cfg.alertCallsigns = {"K1ABC"};
+    cfg.alertCallsigns = QStringList {"K1ABC"};
     ac.setConfig (cfg);
 
     wkjtx::Decode d;
