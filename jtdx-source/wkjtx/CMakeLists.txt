@@ -19,6 +19,11 @@ endif ()
 # Qt5::Network (QNetworkAccessManager for QrzUploader).
 find_package (Qt5 REQUIRED COMPONENTS Core Network Widgets)
 
+# Every wkjtx module with Q_OBJECT needs moc processing: ThemeManager,
+# AutoCall, AutoCallBadge, AutoCallSettingsDialog, ProfileManager,
+# LogRouter, QrzUploader. Enable AUTOMOC for the whole subdir.
+set (CMAKE_AUTOMOC ON)
+
 set (WKJTX_SOURCES
   ProfileManager.cpp
   ProfileManager.hpp
