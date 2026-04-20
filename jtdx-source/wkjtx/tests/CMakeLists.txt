@@ -7,6 +7,10 @@
 
 find_package (Qt5 REQUIRED COMPONENTS Test Core Network)
 
+# Tests use the `#include "test_xxx.moc"` idiom which requires CMake to
+# invoke moc on each test .cpp. AUTOMOC does that transparently.
+set (CMAKE_AUTOMOC ON)
+
 include_directories (
   ${CMAKE_CURRENT_SOURCE_DIR}/..
   ${CMAKE_CURRENT_SOURCE_DIR}/../detectors

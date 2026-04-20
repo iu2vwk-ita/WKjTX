@@ -79,7 +79,8 @@ public:
   int activeSlot () const { return active_slot_; }
 
   // Ordered view of all 5 slots (empty or not). UI renders this.
-  QVector<Profile> const & slots () const { return slots_; }
+  // Named allSlots() not slots() because "slots" is a Qt macro.
+  QVector<Profile> const & allSlots () const { return slots_; }
 
   // Convenience: import an existing JTDX config INI into a slot.
   // Reads %LOCALAPPDATA%/JTDX/<name>.ini and writes it as
