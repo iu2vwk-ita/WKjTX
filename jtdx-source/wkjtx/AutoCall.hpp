@@ -138,6 +138,7 @@ signals:
   // badge refreshes on this.
   void configChanged ();
 
+public:
   // Access to underlying detectors (for log-scan at startup and
   // testing). Profile manager hands these to us; AutoCall doesn't
   // own the detectors by default — ownership decision is deferred to
