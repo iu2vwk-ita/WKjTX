@@ -75,6 +75,13 @@ time on a modern laptop: 10–30 minutes.
 the *Data updates* section, Import/Export ADIF, the font spinboxes,
 and language swapping via `.qm` files.
 
+## Support the project
+
+WKjTX is free and will stay free. If it saves you time or lands you a new DXCC,
+consider buying me a beer — it keeps the coffee hot and the commits coming.
+
+[![Buy me a beer](https://img.shields.io/badge/PayPal-Buy%20me%20a%20beer%20%F0%9F%8D%BA-0070ba?logo=paypal&logoColor=white&style=for-the-badge)](https://www.paypal.com/donate/?business=adivor%40gmail.com&currency_code=EUR&item_name=Buy+IU2VWK+a+beer+%F0%9F%8D%BA)
+
 ## License
 
 GPL-3.0, inherited from WSJT-X and JTDX. Full text in [COPYING](jtdx-source/COPYING).

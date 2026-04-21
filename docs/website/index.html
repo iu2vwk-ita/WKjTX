@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>WKjTX — HF Digital Modes for Windows · IU2VWK</title>
+<meta name="description" content="WKjTX 1.0 — freeware HF digital mode client for Windows. FT8, FT4, JT65, JT9, WSPR-2. Auto-call, one-click data update, ADIF log import/export. Free fork of JTDX by IU2VWK." />
+
+<meta property="og:type" content="website" />
+<meta property="og:url" content="https://iu2vwk.com/wkjtx/" />
+<meta property="og:title" content="WKjTX — HF Digital Modes for Windows" />
+<meta property="og:description" content="Freeware FT8/FT4/JT65/WSPR-2 client for Windows. Auto-call, one-click data update, ADIF log import/export. Free download." />
+<meta property="og:image" content="https://iu2vwk.com/wkjtx/img/screenshot-main.png" />
+
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content="WKjTX — HF Digital Modes for Windows" />
+<meta name="twitter:description" content="Freeware FT8/FT4 client · auto-call · one-click data update · ADIF log · free download by IU2VWK." />
+<meta name="twitter:image" content="https://iu2vwk.com/wkjtx/img/screenshot-main.png" />
+
+<link rel="icon" type="image/x-icon" href="img/favicon.ico" />
+<link rel="icon" type="image/png" sizes="512x512" href="img/icon.png" />
+<link rel="apple-touch-icon" href="img/icon.png" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ===== HEADER ===== -->
+<header class="top">
+  <div class="brand">
+    <span class="brand-mark">WK</span>
+    <div>
+      <div class="brand-name">WK<em>jTX</em></div>
+      <div class="brand-sub">HF DIGITAL MODES · WINDOWS</div>
+    </div>
+  </div>
+  <nav class="nav">
+    <a href="#autocall">Auto-Call</a>
+    <a href="#data">Data Update</a>
+    <a href="#features">Features</a>
+    <a href="#download">Download</a>
+    <a href="https://iu2vwk.com/">IU2VWK Home ↗</a>
+  </nav>
+  <a href="https://github.com/iu2vwk-ita/WKjTX/releases" class="nav-cta" target="_blank" rel="noopener">
+    Download Free →
+  </a>
+</header>
+
+
+<!-- ===== HERO ===== -->
+<section class="hero">
+  <div class="hero-frame">
+    <div class="hero-left">
+      <div class="eyebrow">— Free download · Windows 10 / 11 · 64-bit · No installer</div>
+      <h1>WK<em>jTX</em></h1>
+      <div class="version-line">v1.0.0 · fork of JTDX · derivative of WSJT-X by K1JT</div>
+      <p class="lede">
+        A freeware weak-signal HF digital mode client for Windows — with
+        <b>auto-call</b>, <b>one-click data refresh</b>, and <b>built-in log
+        import/export</b>. Unzip anywhere and go on air in minutes. No subscription.
+        No system changes.
+      </p>
+
+      <div class="dl-row">
+        <a href="https://github.com/iu2vwk-ita/WKjTX/releases" class="dl-btn dl-btn--primary" target="_blank" rel="noopener">
+          <span class="dl-icon">&#11015;</span>
+          <span class="dl-text">
+            <span class="dl-title">Download WKjTX 1.0</span>
+            <span class="dl-sub">Portable ZIP · Windows 64-bit</span>
+          </span>
+        </a>
+        <a href="https://github.com/iu2vwk-ita/WKjTX" class="dl-btn dl-btn--ghost" target="_blank" rel="noopener">
+          <span class="dl-text">
+            <span class="dl-title">View on GitHub →</span>
+            <span class="dl-sub">Source · Issues · Discussions</span>
+          </span>
+        </a>
+      </div>
+      <div class="dl-hint">Free software · GPL-3.0 · no signup required</div>
+
+      <ul class="micro">
+        <li><b>FT8 · FT4 · JT65 · JT9 · T10 · WSPR-2</b> — same decoders as JTDX upstream</li>
+        <li>JTDX multi-pass decoder — more decodes on crowded HF bands</li>
+        <li>Auto-call · one-click data update · ADIF import/export</li>
+        <li>Portable ZIP — unzip anywhere, no installer</li>
+      </ul>
+    </div>
+
+    <div class="hero-right">
+      <div class="screenshot-wrap">
+        <img src="img/screenshot-main.png"
+             alt="WKjTX 1.0 main window — FT8 waterfall and band activity decode list"
+             loading="eager" />
+        <div class="screenshot-caption">WKjTX v1.0.0 · FT8 waterfall + band activity · auto-call badge in status bar</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ===== MODES STRIP ===== -->
+<div class="modes-strip">
+  <div class="modes-inner">
+    <span class="modes-label">Modes</span>
+    <span class="mode-badge">FT8</span>
+    <span class="mode-badge">FT4</span>
+    <span class="mode-badge dim">JT65</span>
+    <span class="mode-badge dim">JT9</span>
+    <span class="mode-badge dim">JT9+JT65</span>
+    <span class="mode-badge dim">T10</span>
+    <span class="mode-badge dim">WSPR-2</span>
+    <span class="modes-right"><b>JTDX multi-pass decoder · more decodes on crowded bands</b></span>
+  </div>
+</div>
+
+
+<!-- ===== WHY / IMPROVEMENTS ===== -->
+<section class="why">
+  <div class="why-inner">
+    <div class="sec-head" style="text-align:left;padding:0;margin-bottom:28px;">
+      <div class="eyebrow">— What's improved over JTDX</div>
+      <h2 style="font-size:clamp(1.8rem,3.5vw,2.6rem);font-weight:600;margin-bottom:10px;">No more dropped replies.<br/>No more endless CQ loops.</h2>
+      <p style="color:var(--ink-dim);font-size:1rem;max-width:680px;">WKjTX fixes the JTDX auto-sequencer and adds the tools every HF DX operator needs — all built in, no companion app required.</p>
+    </div>
+    <div class="why-grid">
+      <div class="why-card">
+        <div class="why-num">01</div>
+        <div class="why-h">Reliable CQ Replies</div>
+        <p>No longer drops replies in marginal copy. If a station
+          answers your CQ and the decode is valid, WKjTX responds —
+          even on a noisy band.</p>
+      </div>
+      <div class="why-card">
+        <div class="why-num">02</div>
+        <div class="why-h">No Stuck CQ Loops</div>
+        <p>The sequencer stops calling CQ when nobody is coming back,
+          instead of cycling indefinitely. You stay in control of your
+          transmit time.</p>
+      </div>
+      <div class="why-card">
+        <div class="why-num">03</div>
+        <div class="why-h">JTDX Decoder Quality</div>
+        <p>Built on JTDX 2.2 — the iterative multi-pass FT8 decoder
+          that routinely out-decodes stock WSJT-X on crowded HF bands.
+          <b>+5–15% more decodes</b> in typical conditions.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ===== AUTO-CALL SHOWCASE ===== -->
+<section id="autocall" class="autocall-showcase">
+  <div class="sec-head">
+    <span class="sec-num">!</span>
+    <h2>Auto-call — <em>hands-free DXing</em></h2>
+    <p>Seven trigger categories. Five alert slots. Hardcoded rate limits so you never flood the band.</p>
+  </div>
+
+  <div class="autocall-grid">
+    <div class="autocall-copy">
+      <div class="autocall-warn">
+        <b>&#9888; Use responsibly.</b> With auto-call ON the station transmits
+        unattended. <b>Never leave the station unattended</b> with auto-call ON
+        while connected to a linear amplifier or a timer-based power strip.
+        You are always responsible for whatever goes on air under your licence.
+      </div>
+
+      <p class="autocall-lead">
+        Open <b>File → Auto-call</b> and WKjTX starts replying to decoded calls
+        automatically — based on the categories you enable. Works in the background
+        while you do other things.
+      </p>
+
+      <ul class="autocall-list">
+        <li><b>NEW DXCC / NEW CQ zone / NEW ITU zone</b> — the DX categories you can't afford to miss during an opening.</li>
+        <li><b>NEW grid 4-char / NEW prefix / NEW callsign</b> — for the chasers who want <i>every</i> new one.</li>
+        <li><b>Alert callsigns</b> — 5 dedicated slots. Perfect for "5T0SP called, I was in the kitchen".</li>
+      </ul>
+
+      <div class="autocall-safe">
+        <div class="autocall-safe-h">Built-in safeguards (not user-editable)</div>
+        <ul>
+          <li><b>120 s cool-down</b> per callsign — never called twice in a row</li>
+          <li><b>3 auto-calls / minute</b> global rate cap</li>
+          <li><b>Pulsing badge</b> in status bar — impossible to miss it's on</li>
+          <li><b>All OFF by default</b> — opt-in per category</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="autocall-shot">
+      <img src="img/screenshot-autocall.png"
+           alt="WKjTX Auto-Call dialog — seven trigger category toggles with safeguards panel"
+           loading="lazy" />
+      <div class="autocall-shot-caption">File → Auto-call: seven opt-in categories · all OFF by default</div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ===== DATA UPDATE SHOWCASE ===== -->
+<section id="data" class="data-showcase">
+  <div class="sec-head">
+    <span class="sec-num green">&#8635;</span>
+    <h2>All reference data — <em>one button</em></h2>
+    <p>Hit Update data once on first run. Four files downloaded, verified, installed. Every URL is editable.</p>
+  </div>
+
+  <div class="data-grid">
+    <div class="data-shot">
+      <img src="img/screenshot-dataupdate.png"
+           alt="WKjTX Settings — Data updates panel with Update data button and last update timestamp"
+           loading="lazy" />
+      <div class="data-shot-caption">Settings → General → Data updates · last update timestamp shown</div>
+    </div>
+
+    <div class="data-copy">
+      <p class="data-lead">
+        No more hunting down four separate files from four websites.
+        <b>One button fetches everything</b> — and shows you when it last
+        ran and whether all files are current.
+      </p>
+
+      <ul class="data-list">
+        <li><b>cty.dat</b> — country / prefix data (Club Log)</li>
+        <li><b>state_data.bin</b> — US state lookups</li>
+        <li><b>grid_data.bin</b> — Maidenhead grid geometry</li>
+        <li><b>lotw-user-activity.csv</b> — LoTW registered users</li>
+        <li><b>Editable URLs</b> — change any field to point at a mirror; clear to restore default</li>
+        <li><b>Update Hamlib</b> — opens the JTDX SourceForge page; drop in the new <code>libhamlib-5.dll</code></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+
+<!-- ===== FEATURES GRID ===== -->
+<section id="features" class="features">
+  <div class="sec-head">
+    <span class="sec-num">I</span>
+    <h2>Every feature you need</h2>
+    <p>Built in. No companion app. No subscription.</p>
+  </div>
+
+  <div class="feature-list">
+    <div class="feature">
+      <div class="f-num">01</div>
+      <div>
+        <div class="f-head">ADIF Log Import</div>
+        <p>Import a <code>.adi</code> file from WSJT-X, JTDX, Log4OM or any
+          other logger. Duplicates skipped on <b>CALL + QSO_DATE + BAND + MODE</b>.</p>
+      </div>
+    </div>
+    <div class="feature">
+      <div class="f-num">02</div>
+      <div>
+        <div class="f-head">ADIF Log Export</div>
+        <p>Save a snapshot of the internal log to any <code>.adi</code> file of
+          your choice — without leaving the app. One click in Settings → General.</p>
+      </div>
+    </div>
+    <div class="feature">
+      <div class="f-num">03</div>
+      <div>
+        <div class="f-head">Font Size Spinboxes</div>
+        <p>Separate point-size spinboxes next to <b>Application Font</b> and
+          <b>Decoded Text Font</b>. Adjust to taste with one click.</p>
+      </div>
+    </div>
+    <div class="feature">
+      <div class="f-num">04</div>
+      <div>
+        <div class="f-head">English · User Translations</div>
+        <p>Ships English only. Drop your compiled <code>wkjtx_&lt;locale&gt;.qm</code>
+          in <code>bin/translations/</code> to run in any language. Legacy
+          <code>jtdx_*.qm</code> files work as-is.</p>
+      </div>
+    </div>
+    <div class="feature">
+      <div class="f-num">05</div>
+      <div>
+        <div class="f-head">Hamlib Updater</div>
+        <p>Opens the JTDX Hamlib SourceForge directory in your browser. Download,
+          drop <code>libhamlib-5.dll</code> into <code>bin\</code>, done.
+          Old DLL auto-renamed as backup.</p>
+      </div>
+    </div>
+    <div class="feature">
+      <div class="f-num">06</div>
+      <div>
+        <div class="f-head">Portable · Zero Install</div>
+        <p>Unzip anywhere — Desktop, USB stick, <code>C:\WKjTX</code>. Everything
+          bundled: DLLs, decoder, Hamlib. Uninstall by deleting the folder.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ===== DOWNLOAD CTA ===== -->
+<section id="download" class="download-cta">
+  <div class="download-cta-inner">
+    <div class="cta-text">
+      <div class="eyebrow">— Free download · portable · no installer</div>
+      <h2>WK<em>jTX</em> 1.0.0</h2>
+      <p>Unzip anywhere — Desktop, <code>C:\WKjTX</code>, USB stick.
+        Everything is bundled: DLLs, decoder, Hamlib.
+        No system changes. Uninstall by deleting the folder.</p>
+    </div>
+    <div class="cta-actions">
+      <a href="https://github.com/iu2vwk-ita/WKjTX/releases" class="dl-btn dl-btn--primary" target="_blank" rel="noopener">
+        <span class="dl-icon">&#11015;</span>
+        <span class="dl-text">
+          <span class="dl-title">Download Free</span>
+          <span class="dl-sub">Portable ZIP · Windows 64-bit</span>
+        </span>
+      </a>
+      <div class="cta-meta">
+        <div>Windows 10 / 11 · 64-bit</div>
+        <div>GPL-3.0 · Free forever</div>
+        <div>No account · No subscription</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ===== ALSO FROM IU2VWK ===== -->
+<section class="also">
+  <div class="promo-strip">
+    <div class="promo-head">
+      <span class="promo-eyebrow">— Also from IU2VWK</span>
+      <h3>More tools built by a ham, for hams.</h3>
+    </div>
+    <div class="promo-grid">
+      <a class="promo-tile" href="https://iu2vwk.com/dsp/" target="_blank" rel="noopener">
+        <span class="promo-mark">DSP</span>
+        <div class="promo-body">
+          <div class="promo-name">IU2VWK <em>DSP</em></div>
+          <div class="promo-tag">Voice cleaner for HF · adaptive filters, notch, NR</div>
+        </div>
+        <span class="promo-price">$9.90<small>perpetual</small></span>
+      </a>
+      <a class="promo-tile" href="https://iu2vwk.com/ft8card/" target="_blank" rel="noopener">
+        <span class="promo-mark">FT8</span>
+        <div class="promo-body">
+          <div class="promo-name">VWK <em>FT8 Card PRO</em></div>
+          <div class="promo-tag">JTAlert-style dashboard · DX Hunter · UDP hub</div>
+        </div>
+        <span class="promo-price">$4.99<small>perpetual</small></span>
+      </a>
+      <a class="promo-tile" href="https://iu2vwk.com/vwksat/" target="_blank" rel="noopener">
+        <span class="promo-mark">SAT</span>
+        <div class="promo-body">
+          <div class="promo-name">VWK <em>Sat Tracking</em></div>
+          <div class="promo-tag">Multi-sat · transponder live · footprint map</div>
+        </div>
+        <span class="promo-price">demo<small>try free</small></span>
+      </a>
+    </div>
+  </div>
+</section>
+
+
+<!-- ===== FOOTER ===== -->
+<footer class="foot">
+  <div class="foot-row">
+    <div class="foot-brand">
+      <span class="brand-mark" style="border-color:var(--amber);color:var(--amber-h);background:linear-gradient(180deg,#1c1814,#0b0907);">WK</span>
+      <div>
+        <div>WK<em>jTX</em></div>
+        <div class="foot-sub">73 de IU2VWK</div>
+      </div>
+    </div>
+    <div class="foot-links">
+      <a href="https://iu2vwk.com" target="_blank" rel="noopener">iu2vwk.com</a>
+      <a href="https://github.com/iu2vwk-ita/WKjTX/releases" target="_blank" rel="noopener">Download</a>
+      <a href="https://github.com/iu2vwk-ita/WKjTX" target="_blank" rel="noopener">GitHub</a>
+      <a href="https://github.com/iu2vwk-ita/WKjTX/discussions" target="_blank" rel="noopener">Discussions</a>
+      <a href="https://github.com/iu2vwk-ita/WKjTX/issues" target="_blank" rel="noopener">Bug reports</a>
+      <a href="mailto:iu2vwk@gmail.com">iu2vwk@gmail.com</a>
+    </div>
+  </div>
+  <div class="foot-rule"></div>
+  <div class="foot-legal">
+    © <span id="year">2026</span> · IU2VWK · Angelo &nbsp;·&nbsp;
+    WKjTX is an independent fork and is not endorsed by the WSJT-X or JTDX projects &nbsp;·&nbsp;
+    GPL-3.0 · Free software
+  </div>
+</footer>
+
+<script>document.getElementById("year").textContent = new Date().getFullYear();</script>
+</body>
+</html>
