@@ -17,7 +17,7 @@ endif ()
 # Qt5 is found at top-level CMakeLists.txt; subdirectories inherit the
 # find_package result. We reference Qt5::Core (QObject, QString) and
 # Qt5::Network (QNetworkAccessManager for QrzUploader).
-find_package (Qt5 REQUIRED COMPONENTS Core Network Widgets)
+find_package (Qt5 REQUIRED COMPONENTS Core Network Widgets SerialPort)
 
 # Every wkjtx module with Q_OBJECT needs moc processing: ThemeManager,
 # AutoCall, AutoCallBadge, AutoCallSettingsDialog, ProfileManager,
@@ -29,6 +29,8 @@ set (WKJTX_SOURCES
   ProfileManager.hpp
   ProfileButton.cpp
   ProfileButton.hpp
+  RadioProfileDialog.cpp
+  RadioProfileDialog.hpp
   AutoCall.cpp
   AutoCall.hpp
   LogRouter.cpp
@@ -76,7 +78,7 @@ target_include_directories (wkjtx_modules PUBLIC
 # target_link_libraries on an OBJECT library (CMake >= 3.12) attaches
 # INTERFACE_INCLUDE_DIRECTORIES of Qt5 modules so the module sources
 # can find QString / QObject / QNetworkAccessManager headers.
-target_link_libraries (wkjtx_modules PUBLIC Qt5::Core Qt5::Network Qt5::Widgets)
+target_link_libraries (wkjtx_modules PUBLIC Qt5::Core Qt5::Network Qt5::Widgets Qt5::SerialPort)
 
 if (WKJTX_BUILD_TESTS)
   enable_testing ()

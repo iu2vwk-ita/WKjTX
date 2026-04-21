@@ -1262,6 +1262,15 @@ void Configuration::applyRadioFromSettings (QSettings & src)
   m.close_rig ();
 }
 
+QStringList Configuration::supportedRigList () const
+{
+  QStringList result;
+  auto const & rigs = m_->transceiver_factory_.supported_transceivers ();
+  for (auto it = rigs.begin (); it != rigs.end (); ++it)
+    result << it.key ();
+  return result;
+}
+
 void Configuration::transceiver_frequency (Frequency f)
 {
 #if WSJT_TRACE_CAT

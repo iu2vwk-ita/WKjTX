@@ -291,6 +291,12 @@ public:
   void snapshotRadioToSettings (QSettings & dest) const;
   void applyRadioFromSettings  (QSettings & src);
 
+  // List of all rig names supported by the bundled hamlib build,
+  // safe to call from anywhere — re-uses Configuration's own
+  // TransceiverFactory rather than spinning up a second one (which
+  // would unregister hamlib globally on destruction).
+  QStringList supportedRigList () const;
+
   // check if a real rig is configured
   bool is_dummy_rig () const;
   bool is_tci () const;

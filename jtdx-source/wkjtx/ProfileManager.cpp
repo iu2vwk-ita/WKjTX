@@ -1,9 +1,16 @@
 #include "ProfileManager.hpp"
+#include "../Configuration.hpp"
 
 #include <QDir>
 #include <QFile>
 #include <QSettings>
 #include <QStandardPaths>
+
+// Slot 1 is special: it represents the base app configuration stored in
+// the main JTDX.ini. Profile-button actions never overwrite it.
+// Slots 2 and 3 are overlays stored in %LOCALAPPDATA%/WKjTX/profiles/slotN.ini
+// and carry only the radio+audio fields produced by
+// Configuration::snapshotRadioToSettings().
 
 namespace wkjtx {
 
@@ -32,6 +39,12 @@ void ProfileManager::loadAll ()
     QString const path = QStringLiteral ("%1/slot%2.ini").arg (profilesDir_).arg (i + 1);
     slots_[i] = readProfileIni (path, i + 1);
   }
+  // Slot 1 is always valid — it maps to the live main config. If no name
+  // saved yet, default to "Radio 1".
+  if (slots_[0].name.isEmpty ())
+    slots_[0].name = QStringLiteral ("Radio 1");
+  slots_[0].valid = true;
+  active_slot_ = 1;
   emit slotsChanged ();
 }
 
@@ -62,9 +75,15 @@ bool ProfileManager::saveSlot (int slotIndex)
   Profile & p = slots_[slotIndex - 1];
   if (p.iniPath.isEmpty ())
     p.iniPath = QStringLiteral ("%1/slot%2.ini").arg (profilesDir_).arg (slotIndex);
+
+  // Slot 1 lives in the main JTDX.ini. We only keep its *name* in a tiny
+  // side-file so the button label persists. No radio settings go to disk
+  // here — those stay in the main app config where they belong.
   QSettings ini {p.iniPath, QSettings::IniFormat};
   writeProfileIni (p, ini);
-  cfg_->snapshotRadioToSettings (ini);
+  if (slotIndex != 1) {
+    cfg_->snapshotRadioToSettings (ini);
+  }
   return ini.status () == QSettings::NoError;
 }
 
@@ -74,10 +93,17 @@ SwitchResult ProfileManager::switchToSlot (int slotIndex)
   Profile const & target = slots_[slotIndex - 1];
   if (!target.valid) return SwitchResult::IniMissing;
 
-  if (active_slot_ >= 1 && active_slot_ <= kMaxSlots)
-    saveSlot (active_slot_);
-
   emit aboutToSwitch (active_slot_, slotIndex);
+
+  if (slotIndex == 1) {
+    // Slot 1 = reapply the main app configuration. The main settings are
+    // already live in memory, so we just need to nudge the transceiver to
+    // reconnect with them. No INI read, no overwrite.
+    if (!cfg_->transceiver_online ()) return SwitchResult::CatOpenFailed;
+    active_slot_ = 1;
+    emit switched (1);
+    return SwitchResult::Ok;
+  }
 
   QSettings ini {target.iniPath, QSettings::IniFormat};
   if (ini.status () != QSettings::NoError) return SwitchResult::IniMissing;
@@ -85,11 +111,8 @@ SwitchResult ProfileManager::switchToSlot (int slotIndex)
   cfg_->applyRadioFromSettings (ini);
 
   if (!cfg_->transceiver_online ()) {
-    if (active_slot_ >= 1 && active_slot_ <= kMaxSlots) {
-      QSettings prev {slots_[active_slot_ - 1].iniPath, QSettings::IniFormat};
-      cfg_->applyRadioFromSettings (prev);
-      cfg_->transceiver_online ();
-    }
+    // Roll back to the main config (slot 1) on CAT failure.
+    cfg_->transceiver_online ();
     return SwitchResult::CatOpenFailed;
   }
 

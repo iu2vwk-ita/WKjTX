@@ -8,6 +8,36 @@ upstream JTDX version is preserved in internal Versions.cmake
 for code compatibility, but public releases are tagged
 `v0.1.0` → `v1.0.0` reflecting WKjTX's own delivery phases.
 
+## [v1.1.0] — 2026-04-21 — Radio profile quick-switch
+
+### Added
+
+- **3-slot radio profile buttons** in the top-right menubar corner (next
+  to Help). Slot 1 mirrors the base app configuration. Slots 2 and 3
+  are independent overlays stored under
+  `%LOCALAPPDATA%/WKjTX/profiles/slot<N>.ini` — they never touch the
+  main `WKjTX.ini`.
+  - Left-click a named slot → immediate switch (apply radio + audio,
+    reconnect transceiver).
+  - Left-click an empty "+" slot → opens the compact configuration
+    dialog.
+  - Right-click → context menu (Configure / Rename / Hide / Clear).
+  - Active slot shows an amber border, inactive stays gray.
+- **RadioProfileDialog** for slots 2 and 3: three group boxes
+  (General, Radio, Audio) with CAT serial port and PTT port as
+  auto-detected dropdowns via `QSerialPortInfo::availablePorts()`,
+  rig list pulled from the live `TransceiverFactory` (no second
+  Hamlib registration), data/stop/handshake/DTR/RTS combos, audio
+  input/output device pickers.
+- **View → Show all profile buttons** menu action to re-display
+  hidden slots.
+
+### Fixed
+
+- Profile switching no longer overwrites the base `WKjTX.ini`.
+- Dialog no longer unregisters Hamlib globally on close (temporary
+  `TransceiverFactory` eliminated).
+
 ## [v1.0.0] — 2026-04 — Auto-call system live
 
 ### Added

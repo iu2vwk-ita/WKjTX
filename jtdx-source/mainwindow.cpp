@@ -63,6 +63,9 @@
 #include "wkjtx/AutoCallSettingsDialog.hpp"
 #include "wkjtx/ProfileManager.hpp"
 #include "wkjtx/ProfileButton.hpp"
+#include "wkjtx/RadioProfileDialog.hpp"
+#include <QDir>
+#include <QFileInfo>
 #include "wkjtx/detectors/NewDxccDetector.hpp"
 #include "wkjtx/detectors/ZoneDetector.hpp"
 #include "wkjtx/detectors/GridDetector.hpp"
@@ -3011,21 +3014,39 @@ void MainWindow::switchToProfile (int slot)
 void MainWindow::configureProfile (int slot)
 {
   auto & p = const_cast<wkjtx::Profile &> (m_profileManager->allSlots ().at (slot - 1));
-  if (p.isEmpty ()) {
+
+  // Slot 1 represents the main app config — edit it through the normal
+  // Settings dialog, same as before profile buttons existed. Profile
+  // actions never overwrite the main JTDX.ini.
+  if (slot == 1) {
     bool ok;
-    QString name = QInputDialog::getText (this, tr ("New profile"),
-      tr ("Profile name:"), QLineEdit::Normal,
-      QStringLiteral ("Radio %1").arg (slot), &ok);
+    QString name = QInputDialog::getText (this, tr ("Rename Radio 1"),
+      tr ("Name for slot 1 (base configuration):"),
+      QLineEdit::Normal, p.name.isEmpty () ? QStringLiteral ("Radio 1") : p.name, &ok);
     if (!ok || name.trimmed ().isEmpty ()) return;
-    p.name    = name.trimmed ();
-    p.valid   = true;
-    p.iniPath = QStringLiteral ("%1/profiles/slot%2.ini")
-                  .arg (QStandardPaths::writableLocation (QStandardPaths::AppLocalDataLocation))
-                  .arg (slot);
-    m_profileBtn[slot - 1]->setProfileName (p.name);
+    p.name  = name.trimmed ();
+    p.valid = true;
+    p.iniPath = QStringLiteral ("%1/profiles/slot1.ini")
+                  .arg (QStandardPaths::writableLocation (QStandardPaths::AppLocalDataLocation));
+    m_profileManager->saveSlot (1);
+    m_profileBtn[0]->setProfileName (p.name);
+    return;
   }
-  if (QDialog::Accepted == m_config.exec ())
-    m_profileManager->saveSlot (slot);
+
+  // Slots 2 / 3: compact dialog that writes only to its own slot INI.
+  QString iniPath = QStringLiteral ("%1/profiles/slot%2.ini")
+                      .arg (QStandardPaths::writableLocation (QStandardPaths::AppLocalDataLocation))
+                      .arg (slot);
+  QDir {}.mkpath (QFileInfo (iniPath).absolutePath ());
+  wkjtx::RadioProfileDialog dlg {slot, iniPath, m_config.supportedRigList (), this};
+  if (dlg.exec () == QDialog::Accepted) {
+    p.name    = dlg.profileName ();
+    p.iniPath = iniPath;
+    p.valid   = true;
+    p.visible = true;
+    m_profileBtn[slot - 1]->setProfileName (p.name);
+    m_profileBtn[slot - 1]->setSlotVisible (true);
+  }
 }
 
 void MainWindow::renameProfile (int slot)
@@ -3050,7 +3071,7 @@ void MainWindow::clearProfile (int slot)
 {
   auto & p = const_cast<wkjtx::Profile &> (m_profileManager->allSlots ().at (slot - 1));
   QFile::remove (p.iniPath);
-  p.name  = {};
+  p.name.clear ();
   p.valid = false;
   m_profileBtn[slot - 1]->setProfileName ({});
   m_profileBtn[slot - 1]->setActive (false);
