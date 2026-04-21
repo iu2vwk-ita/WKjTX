@@ -1,10 +1,27 @@
 # WKjTX
 
-**Weak-signal HF digital modes for Windows.** WKjTX 1.0 is a freeware
+**Weak-signal HF digital modes for Windows.** WKjTX 1.1 is a freeware
 fork of [JTDX](https://sourceforge.net/p/jtdx/), itself forked from
 [WSJT-X](https://wsjt.sourceforge.io/wsjtx.html) (K1JT). It speaks
 FT8, FT4, JT65, JT9, JT9+JT65, T10 and WSPR-2 — same decoders, same
 operating modes as upstream.
+
+## What's new in 1.1
+
+- **3-slot radio profile quick-switch** — three buttons in the top-right
+  menubar corner (next to Help). Slot 1 mirrors your base configuration;
+  slots 2 and 3 are independent overlays stored in separate INI files
+  under `%LOCALAPPDATA%/WKjTX/profiles/`. Left-click to switch radios
+  instantly (CAT + audio + transceiver reconnect). Left-click "+" on
+  empty slots opens a compact configurator with auto-detected serial
+  ports for CAT and PTT. Right-click for Configure / Rename / Hide /
+  Clear.
+
+  ![Radio profile buttons](docs/website/img/screenshot-radio-profiles.png)
+
+  > Profile actions never overwrite the base `WKjTX.ini`. Mistakes in
+  > slot 2 or 3 stay in their own file — your main configuration is
+  > always safe.
 
 ## What's different from JTDX
 
@@ -51,14 +68,18 @@ operating modes as upstream.
   (default warm dark), **Amber Night** (deeper black), **Amber High
   Contrast**, **Native** (OS default style) and **Dark (legacy JTDX)**.
   The active theme is persisted across sessions.
-- **3-slot radio profile quick-switch**: three buttons in the menubar
-  corner (next to Help) each store a complete CAT + audio profile. Click
-  to switch instantly; right-click to configure, rename, hide or clear.
+- **3-slot radio profile quick-switch** *(NEW in 1.1)*: three buttons
+  in the menubar corner (next to Help). Slot 1 mirrors your base
+  configuration; slots 2 and 3 are independent overlays in
+  `%LOCALAPPDATA%/WKjTX/profiles/slot<N>.ini`. Left-click to switch
+  rigs (CAT + audio + transceiver reconnect). Empty slots show "+"
+  and open the compact configurator with auto-detected COM ports for
+  CAT and PTT. Right-click for Configure / Rename / Hide / Clear.
 - **Hamlib updater** opens the JTDX SourceForge Hamlib directory in
   your browser — manual drop-in of `libhamlib-5.dll` with an
   automatic `_old` backup slot.
-- **Version reset to 1.0.0.** The upstream JTDX 2.2.x version
-  number is no longer exposed.
+- **Independent versioning.** Currently at **1.1.0**. The upstream
+  JTDX 2.2.x version number is no longer exposed.
 
 Planned in later releases: per-profile log routing, qrz.com upload.
 

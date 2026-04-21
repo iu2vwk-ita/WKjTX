@@ -3,18 +3,18 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>WKjTX — HF Digital Modes for Windows · IU2VWK</title>
-<meta name="description" content="WKjTX 1.0 — freeware HF digital mode client for Windows. FT8, FT4, JT65, JT9, WSPR-2. Auto-call, one-click data update, ADIF log import/export. Free fork of JTDX by IU2VWK." />
+<title>WKjTX 1.1 — HF Digital Modes for Windows · IU2VWK</title>
+<meta name="description" content="WKjTX 1.1 — freeware HF digital mode client for Windows. FT8, FT4, JT65, JT9, WSPR-2. NEW: 3-slot radio profile quick-switch · auto-call · one-click data update · ADIF log import/export. Free fork of JTDX by IU2VWK." />
 
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://iu2vwk.com/wkjtx/" />
-<meta property="og:title" content="WKjTX — HF Digital Modes for Windows" />
-<meta property="og:description" content="Freeware FT8/FT4/JT65/WSPR-2 client for Windows. Auto-call, one-click data update, ADIF log import/export. Free download." />
+<meta property="og:title" content="WKjTX 1.1 — HF Digital Modes for Windows" />
+<meta property="og:description" content="3-slot radio profile quick-switch · FT8/FT4/JT65/WSPR-2 · auto-call · one-click data update · ADIF log import/export. Free download." />
 <meta property="og:image" content="https://iu2vwk.com/wkjtx/img/screenshot-main.png" />
 
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="WKjTX — HF Digital Modes for Windows" />
-<meta name="twitter:description" content="Freeware FT8/FT4 client · auto-call · one-click data update · ADIF log · free download by IU2VWK." />
+<meta name="twitter:title" content="WKjTX 1.1 — HF Digital Modes for Windows" />
+<meta name="twitter:description" content="3-slot radio profiles · FT8/FT4 · auto-call · one-click data update · ADIF log · free download by IU2VWK." />
 <meta name="twitter:image" content="https://iu2vwk.com/wkjtx/img/screenshot-main.png" />
 
 <link rel="icon" type="image/x-icon" href="img/favicon.ico" />
@@ -34,6 +34,7 @@
     </div>
   </div>
   <nav class="nav">
+    <a href="#profiles">Radio Profiles</a>
     <a href="#autocall">Auto-Call</a>
     <a href="#data">Data Update</a>
     <a href="#features">Features</a>
@@ -52,11 +53,12 @@
     <div class="hero-left">
       <div class="eyebrow">— Free download · Windows 10 / 11 · 64-bit · No installer</div>
       <h1>WK<em>jTX</em></h1>
-      <div class="version-line">v1.0.0 · fork of JTDX · derivative of WSJT-X by K1JT</div>
+      <div class="version-line">v1.1.0 · fork of JTDX · derivative of WSJT-X by K1JT</div>
       <p class="lede">
         A freeware weak-signal HF digital mode client for Windows — with
-        <b>auto-call</b>, <b>one-click data refresh</b>, and <b>built-in log
-        import/export</b>. Unzip anywhere and go on air in minutes. No subscription.
+        <b>3-slot radio profile quick-switch</b>, <b>auto-call</b>,
+        <b>one-click data refresh</b>, and <b>built-in log import/export</b>.
+        Unzip anywhere and go on air in minutes. No subscription.
         No system changes.
       </p>
 
@@ -64,7 +66,7 @@
         <a href="https://github.com/iu2vwk-ita/WKjTX/releases" class="dl-btn dl-btn--primary" target="_blank" rel="noopener">
           <span class="dl-icon">&#11015;</span>
           <span class="dl-text">
-            <span class="dl-title">Download WKjTX 1.0</span>
+            <span class="dl-title">Download WKjTX 1.1</span>
             <span class="dl-sub">Portable ZIP · Windows 64-bit</span>
           </span>
         </a>
@@ -78,6 +80,7 @@
       <div class="dl-hint">Free software · GPL-3.0 · no signup required</div>
 
       <ul class="micro">
+        <li><b>NEW in 1.1:</b> 3-slot radio profile quick-switch — swap rigs in one click</li>
         <li><b>FT8 · FT4 · JT65 · JT9 · T10 · WSPR-2</b> — same decoders as JTDX upstream</li>
         <li>JTDX multi-pass decoder — more decodes on crowded HF bands</li>
         <li>Auto-call · one-click data update · ADIF import/export</li>
@@ -142,6 +145,51 @@
         <p>Built on JTDX 2.2 — the iterative multi-pass FT8 decoder
           that routinely out-decodes stock WSJT-X on crowded HF bands.
           <b>+5–15% more decodes</b> in typical conditions.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ===== RADIO PROFILES SHOWCASE (NEW v1.1) ===== -->
+<section id="profiles" class="profiles-showcase">
+  <div class="sec-head">
+    <span class="sec-num">★</span>
+    <h2>3-radio quick-switch — <em>one click, one rig</em></h2>
+    <p>NEW in v1.1. Three preset slots in the menubar corner. Switch radios without ever opening Settings.</p>
+  </div>
+
+  <div class="profiles-grid">
+    <div class="profiles-shot">
+      <img src="img/screenshot-radio-profiles.png"
+           alt="WKjTX 1.1 — three radio profile buttons next to Help in the menubar corner: IC-7300 active in amber, two empty + slots"
+           loading="lazy" />
+      <div class="profiles-shot-caption">Top-right corner of the menubar · active slot in amber · empty slots show "+"</div>
+    </div>
+
+    <div class="profiles-copy">
+      <p class="profiles-lead">
+        Run more than one rig from the same PC? <b>Click a slot, the radio
+        switches</b> — CAT, audio device, PTT, the lot. No Settings dialog.
+        No quitting and re-launching. No companion app.
+      </p>
+
+      <ul class="profiles-list">
+        <li><b>Slot 1</b> — your base configuration. Always there, always safe. Editing it goes through normal Settings.</li>
+        <li><b>Slots 2 &amp; 3</b> — independent overlays. Each lives in its own INI file under <code>%LOCALAPPDATA%/WKjTX/profiles/</code>. They never touch your main config.</li>
+        <li><b>Left-click</b> a named slot → instant switch (CAT reconnect, audio re-init, all in-app).</li>
+        <li><b>Left-click "+"</b> → opens the compact configurator: rig dropdown, CAT &amp; PTT serial port pickers, baud, handshake, audio in/out devices.</li>
+        <li><b>Right-click</b> any slot → Configure / Rename / Hide / Clear.</li>
+      </ul>
+
+      <div class="profiles-safe">
+        <div class="profiles-safe-h">Why this matters</div>
+        <ul>
+          <li><b>Mobile + base setup</b> — IC-705 in the field, IC-7300 at home, swap in seconds.</li>
+          <li><b>SO2R-style operation</b> — second radio on a different sound card, ready to go on the same WKjTX install.</li>
+          <li><b>Test rig swaps</b> — try a borrowed radio without losing your base config.</li>
+          <li><b>Zero risk</b> — Slot 1 is read-only from the profile button. Mistakes in slot 2/3 stay there.</li>
+        </ul>
       </div>
     </div>
   </div>
@@ -302,7 +350,7 @@
   <div class="download-cta-inner">
     <div class="cta-text">
       <div class="eyebrow">— Free download · portable · no installer</div>
-      <h2>WK<em>jTX</em> 1.0.0</h2>
+      <h2>WK<em>jTX</em> 1.1.0</h2>
       <p>Unzip anywhere — Desktop, <code>C:\WKjTX</code>, USB stick.
         Everything is bundled: DLLs, decoder, Hamlib.
         No system changes. Uninstall by deleting the folder.</p>
