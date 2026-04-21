@@ -68,11 +68,12 @@ jobs:
 
       - name: Build JTDX-Hamlib (static)
         run: |
+          WS=$(cygpath -u "${GITHUB_WORKSPACE}")
           cd third-party/jtdxhamlib
           ./bootstrap
           mkdir -p build && cd build
           ../configure \
-            --prefix="${GITHUB_WORKSPACE}/build-artifacts/hamlib" \
+            --prefix="${WS}/build-artifacts/hamlib" \
             --disable-shared --enable-static \
             --without-cxx-binding --disable-winradio \
             --disable-dependency-tracking \
@@ -82,12 +83,13 @@ jobs:
 
       - name: Configure WKjTX
         run: |
+          WS=$(cygpath -u "${GITHUB_WORKSPACE}")
           cd jtdx-source
           mkdir -p build-wkjtx && cd build-wkjtx
           cmake -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_PREFIX_PATH="${GITHUB_WORKSPACE}/build-artifacts/hamlib" \
-            -DCMAKE_INSTALL_PREFIX="${GITHUB_WORKSPACE}/build-artifacts/wkjtx" \
+            -DCMAKE_PREFIX_PATH="${WS}/build-artifacts/hamlib" \
+            -DCMAKE_INSTALL_PREFIX="${WS}/build-artifacts/wkjtx" \
             -DWKJTX_BUILD_TESTS=ON \
             -DWSJT_GENERATE_DOCS=OFF \
             -DCMAKE_Fortran_FLAGS="-fallow-argument-mismatch" \
