@@ -73,7 +73,8 @@ jobs:
           ../configure \
             --prefix="${GITHUB_WORKSPACE}/build-artifacts/hamlib" \
             --disable-shared --enable-static \
-            --without-cxx-binding --disable-winradio
+            --without-cxx-binding --disable-winradio \
+            --disable-dependency-tracking
           make -j$(nproc)
           make install
 
