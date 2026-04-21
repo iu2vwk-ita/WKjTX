@@ -78,8 +78,12 @@ jobs:
             --without-cxx-binding --disable-winradio \
             --disable-dependency-tracking \
             MAKE=mingw32-make
-          mingw32-make -j$(nproc)
-          mingw32-make install
+          # Build only what we need — WKjTX links against the static lib,
+          # not the command-line utilities. Skipping `tests/` avoids a
+          # readline/MSYS2 API mismatch that breaks rigctl/rigctld.
+          HAMLIB_SUBDIRS="macros include lib security src c++ bindings"
+          mingw32-make -j$(nproc) SUBDIRS="$HAMLIB_SUBDIRS"
+          mingw32-make install SUBDIRS="$HAMLIB_SUBDIRS"
 
       - name: Configure WKjTX
         run: |
