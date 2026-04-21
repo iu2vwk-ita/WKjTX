@@ -1,41 +1,29 @@
 #ifndef WKJTX_PROFILE_MANAGER_HPP
 #define WKJTX_PROFILE_MANAGER_HPP
 
-// ProfileManager — 5-slot radio profile quick-switch system.
+// ProfileManager — 3-slot radio profile quick-switch system.
 //
-// A "profile" is a complete named configuration (CAT, audio, UDP ports,
-// log path, macros, auto-call config, etc.) that the user can recall
-// with one click or an F-key (F1..F5). Only one profile is active at a
-// time (v0.2 scope: single-active). Switching a profile closes hardware
-// resources (CAT, audio, UDP), loads the new INI, and reopens with the
-// new values. If validation fails mid-switch, roll back to the prior
-// profile.
-//
-// This is a SKELETON header. Implementation is delivered in Plan 2
-// (WKjTX v0.2).
+// Each slot stores a complete CAT+audio configuration in a separate INI
+// file under %LOCALAPPDATA%/WKjTX/profiles/slot<N>.ini. Switching is
+// immediate: save current slot, load new slot into Configuration,
+// reconnect transceiver. Rolls back on CAT open failure.
 
 #include <QObject>
 #include <QString>
 #include <QVector>
-#include <QKeySequence>
 
 class QSettings;
-class Configuration;  // JTDX upstream class
+class Configuration;
 
 namespace wkjtx {
 
-// A single profile slot. Data owned by the INI file on disk; this is
-// just the in-memory view used by ProfileManager.
 struct Profile
 {
-  int slotIndex {0};               // 1..5 (0 = unassigned)
-  QString name;                    // user-assigned, e.g. "IC-7300"
-  QString colorTag;                // optional hex color #RRGGBB
-  QKeySequence hotkey;             // usually F1..F5
-  QString iniPath;                 // absolute path to the profile's INI file
-  QString logPath;                 // empty = use shared global log;
-                                   // non-empty = per-profile ADIF file
-  bool valid {false};              // false if INI is missing or malformed
+  int     slotIndex {0};
+  QString name;
+  QString iniPath;
+  bool    visible {true};
+  bool    valid   {false};
 
   bool isEmpty () const { return name.isEmpty (); }
 };
@@ -59,7 +47,7 @@ class ProfileManager : public QObject
   Q_OBJECT
 
 public:
-  static constexpr int kMaxSlots = 5;
+  static constexpr int kMaxSlots = 3;
 
   explicit ProfileManager (Configuration * cfg, QObject * parent = nullptr);
   ~ProfileManager () override;
@@ -82,10 +70,9 @@ public:
   // Named allSlots() not slots() because "slots" is a Qt macro.
   QVector<Profile> const & allSlots () const { return slots_; }
 
-  // Convenience: import an existing JTDX config INI into a slot.
-  // Reads %LOCALAPPDATA%/JTDX/<name>.ini and writes it as
-  // %LOCALAPPDATA%/WKjTX/profiles/slot<N>.ini with a WKjTX header.
-  bool importFromJtdx (QString const & jtdxIniPath, int targetSlot);
+  void setSlotVisible (int slotIndex, bool visible);
+  bool isSlotVisible  (int slotIndex) const;
+  void showAllSlots   ();
 
 signals:
   // Fired immediately before hardware resources close.

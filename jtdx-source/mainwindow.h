@@ -55,6 +55,8 @@ namespace wkjtx {
   class GridDetector;
   class PrefixDetector;
   class CallsignDetector;
+  class ProfileManager;
+  class ProfileButton;
 }
 
 class QProcessEnvironment;
@@ -124,6 +126,14 @@ protected:
   virtual void mousePressEvent(QMouseEvent *event);
 
 private slots:
+  // WKjTX radio profile slots
+  void switchToProfile      (int slot);
+  void configureProfile     (int slot);
+  void renameProfile        (int slot);
+  void hideProfile          (int slot);
+  void clearProfile         (int slot);
+  void showAllProfileButtons ();
+
   void on_tx1_editingFinished();
   void on_tx2_editingFinished();
   void on_tx3_editingFinished();
@@ -403,6 +413,7 @@ private:
   void createAutoCallMenu (); // WKjTX: "File → Auto-call..." menu entry
   void createAutoCallBadge (); // WKjTX: flashing badge in the status bar
   void feedAutoCall (class DecodedText * decodedtext); // WKjTX: route decode to autocall
+  void createProfileButtons (); // WKjTX: 3-slot radio profile buttons in menubar corner
 
   JTDXDateTime * m_jtdxtime;
   QProcessEnvironment const& m_env;
@@ -418,6 +429,10 @@ private:
   // (Qt deletes via parent-child when MainWindow destructs).
   wkjtx::AutoCall          * m_autoCall      {nullptr};
   wkjtx::AutoCallBadge     * m_autoCallBadge {nullptr};
+
+  // WKjTX radio profile quick-switch
+  wkjtx::ProfileManager    * m_profileManager {nullptr};
+  wkjtx::ProfileButton     * m_profileBtn[3]  {nullptr, nullptr, nullptr};
   wkjtx::NewDxccDetector   * m_detDxcc       {nullptr};
   wkjtx::ZoneDetector      * m_detZone       {nullptr};
   wkjtx::GridDetector      * m_detGrid       {nullptr};

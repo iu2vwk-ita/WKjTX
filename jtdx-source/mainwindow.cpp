@@ -61,11 +61,16 @@
 #include "wkjtx/AutoCall.hpp"
 #include "wkjtx/AutoCallBadge.hpp"
 #include "wkjtx/AutoCallSettingsDialog.hpp"
+#include "wkjtx/ProfileManager.hpp"
+#include "wkjtx/ProfileButton.hpp"
 #include "wkjtx/detectors/NewDxccDetector.hpp"
 #include "wkjtx/detectors/ZoneDetector.hpp"
 #include "wkjtx/detectors/GridDetector.hpp"
 #include "wkjtx/detectors/PrefixDetector.hpp"
 #include "wkjtx/detectors/CallsignDetector.hpp"
+#include <QHBoxLayout>
+#include <QInputDialog>
+#include <QMessageBox>
 
 #include "ui_mainwindow.h"
 #include "moc_mainwindow.cpp"
@@ -462,6 +467,7 @@ MainWindow::MainWindow(bool multiple, QSettings * settings, QSharedMemory *shdme
   createThemeMenu ();        // WKjTX: "Tema" menu
   createAutoCallMenu ();     // WKjTX: "Auto-call..." in File menu + instantiate engine
   createAutoCallBadge ();    // WKjTX: flashing badge in status bar
+  createProfileButtons ();   // WKjTX: 3-slot profile quick-switch in menubar corner
   m_config.set_jtdxtime (m_jtdxtime);
   ui->decodedTextBrowser->setConfiguration (&m_config);
   ui->decodedTextBrowser2->setConfiguration (&m_config);
@@ -2944,6 +2950,121 @@ void MainWindow::feedAutoCall (DecodedText * decodedtext)
 // WKjTX: build the "Tema" menu programmatically, inserted before Help
 // on the menu bar. Five preset themes in a QActionGroup (radio-exclusive).
 // Clicking an item applies the theme immediately and persists the choice.
+// ── Radio profile quick-switch ──────────────────────────────────────────────
+
+void MainWindow::createProfileButtons ()
+{
+  m_profileManager = new wkjtx::ProfileManager {&m_config, this};
+  m_profileManager->loadAll ();
+
+  QWidget     * corner = new QWidget (this);
+  QHBoxLayout * hbox   = new QHBoxLayout (corner);
+  hbox->setContentsMargins (4, 0, 4, 0);
+  hbox->setSpacing (4);
+
+  for (int i = 0; i < 3; ++i) {
+    auto * btn = new wkjtx::ProfileButton {i + 1, corner};
+    m_profileBtn[i] = btn;
+    auto const & p = m_profileManager->allSlots ().at (i);
+    btn->setProfileName (p.name);
+    btn->setActive (m_profileManager->activeSlot () == i + 1);
+    btn->setSlotVisible (p.visible);
+    hbox->addWidget (btn);
+
+    connect (btn, &wkjtx::ProfileButton::switchRequested,    this, &MainWindow::switchToProfile);
+    connect (btn, &wkjtx::ProfileButton::configureRequested, this, &MainWindow::configureProfile);
+    connect (btn, &wkjtx::ProfileButton::renameRequested,    this, &MainWindow::renameProfile);
+    connect (btn, &wkjtx::ProfileButton::hideRequested,      this, &MainWindow::hideProfile);
+    connect (btn, &wkjtx::ProfileButton::clearRequested,     this, &MainWindow::clearProfile);
+  }
+
+  menuBar ()->setCornerWidget (corner, Qt::TopRightCorner);
+
+  connect (m_profileManager, &wkjtx::ProfileManager::switched, this,
+    [this] (int newSlot) {
+      for (int i = 0; i < 3; ++i)
+        m_profileBtn[i]->setActive (i + 1 == newSlot);
+      if (m_config.restart_audio_input () && !m_config.audio_input_device ().isNull ())
+        Q_EMIT startAudioInputStream (m_config.audio_input_device (),
+                 m_rx_audio_buffer_frames, m_detector,
+                 m_downSampleFactor, m_config.audio_input_channel ());
+      if (m_config.restart_audio_output () && !m_config.audio_output_device ().isNull ())
+        Q_EMIT initializeAudioOutputStream (m_config.audio_output_device (),
+                 AudioDevice::Mono == m_config.audio_output_channel () ? 1 : 2,
+                 m_tx_audio_buffer_frames);
+    });
+
+  // "Show all profile buttons" in View menu
+  QAction * showAll = ui->menuView->addAction (tr ("Show all profile buttons"));
+  connect (showAll, &QAction::triggered, this, &MainWindow::showAllProfileButtons);
+}
+
+void MainWindow::switchToProfile (int slot)
+{
+  if (m_profileManager->activeSlot () == slot) return;
+  auto result = m_profileManager->switchToSlot (slot);
+  if (result != wkjtx::SwitchResult::Ok)
+    QMessageBox::warning (this, tr ("Profile switch failed"),
+      tr ("Could not connect to the rig configured in profile %1.").arg (slot));
+}
+
+void MainWindow::configureProfile (int slot)
+{
+  auto & p = const_cast<wkjtx::Profile &> (m_profileManager->allSlots ().at (slot - 1));
+  if (p.isEmpty ()) {
+    bool ok;
+    QString name = QInputDialog::getText (this, tr ("New profile"),
+      tr ("Profile name:"), QLineEdit::Normal,
+      QStringLiteral ("Radio %1").arg (slot), &ok);
+    if (!ok || name.trimmed ().isEmpty ()) return;
+    p.name    = name.trimmed ();
+    p.valid   = true;
+    p.iniPath = QStringLiteral ("%1/profiles/slot%2.ini")
+                  .arg (QStandardPaths::writableLocation (QStandardPaths::AppLocalDataLocation))
+                  .arg (slot);
+    m_profileBtn[slot - 1]->setProfileName (p.name);
+  }
+  if (QDialog::Accepted == m_config.exec ())
+    m_profileManager->saveSlot (slot);
+}
+
+void MainWindow::renameProfile (int slot)
+{
+  auto & p = const_cast<wkjtx::Profile &> (m_profileManager->allSlots ().at (slot - 1));
+  bool ok;
+  QString name = QInputDialog::getText (this, tr ("Rename profile"),
+    tr ("New name:"), QLineEdit::Normal, p.name, &ok);
+  if (!ok || name.trimmed ().isEmpty ()) return;
+  p.name = name.trimmed ();
+  m_profileManager->saveSlot (slot);
+  m_profileBtn[slot - 1]->setProfileName (p.name);
+}
+
+void MainWindow::hideProfile (int slot)
+{
+  m_profileManager->setSlotVisible (slot, false);
+  m_profileBtn[slot - 1]->setSlotVisible (false);
+}
+
+void MainWindow::clearProfile (int slot)
+{
+  auto & p = const_cast<wkjtx::Profile &> (m_profileManager->allSlots ().at (slot - 1));
+  QFile::remove (p.iniPath);
+  p.name  = {};
+  p.valid = false;
+  m_profileBtn[slot - 1]->setProfileName ({});
+  m_profileBtn[slot - 1]->setActive (false);
+}
+
+void MainWindow::showAllProfileButtons ()
+{
+  m_profileManager->showAllSlots ();
+  for (int i = 0; i < 3; ++i)
+    m_profileBtn[i]->setSlotVisible (true);
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+
 void MainWindow::createThemeMenu ()
 {
   auto * menu = new QMenu (tr ("Tema"), this);

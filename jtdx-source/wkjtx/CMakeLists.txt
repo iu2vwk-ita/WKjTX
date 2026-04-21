@@ -27,6 +27,8 @@ set (CMAKE_AUTOMOC ON)
 set (WKJTX_SOURCES
   ProfileManager.cpp
   ProfileManager.hpp
+  ProfileButton.cpp
+  ProfileButton.hpp
   AutoCall.cpp
   AutoCall.hpp
   LogRouter.cpp

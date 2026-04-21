@@ -284,6 +284,13 @@ public:
   // already open.
   bool transceiver_online ();
 
+  // Radio profile helpers: snapshot current CAT+audio state to any
+  // QSettings destination, or apply settings from a profile QSettings.
+  // applyRadioFromSettings calls transceiver_offline() internally;
+  // caller must call transceiver_online() afterwards.
+  void snapshotRadioToSettings (QSettings & dest) const;
+  void applyRadioFromSettings  (QSettings & src);
+
   // check if a real rig is configured
   bool is_dummy_rig () const;
   bool is_tci () const;

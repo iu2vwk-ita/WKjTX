@@ -1,11 +1,7 @@
 #include "ProfileManager.hpp"
 
-// Skeleton implementation — v0.2 (Plan 2) will fill this in.
-// The header documents the intended behavior; this TU exists so the
-// code compiles and linking succeeds once the module is added to
-// CMakeLists.txt.
-
 #include <QDir>
+#include <QFile>
 #include <QSettings>
 #include <QStandardPaths>
 
@@ -18,9 +14,8 @@ ProfileManager::ProfileManager (Configuration * cfg, QObject * parent)
   profilesDir_ = QStandardPaths::writableLocation (QStandardPaths::AppLocalDataLocation)
                + QStringLiteral ("/profiles");
   slots_.resize (kMaxSlots);
-  for (int i = 0; i < kMaxSlots; ++i) {
+  for (int i = 0; i < kMaxSlots; ++i)
     slots_[i].slotIndex = i + 1;
-  }
 }
 
 ProfileManager::~ProfileManager () = default;
@@ -44,64 +39,90 @@ Profile ProfileManager::readProfileIni (QString const & path, int slotIndex) con
 {
   Profile p;
   p.slotIndex = slotIndex;
-  p.iniPath = path;
-
+  p.iniPath   = path;
   QSettings ini {path, QSettings::IniFormat};
-  if (ini.status () != QSettings::NoError) {
-    p.valid = false;
-    return p;
-  }
-  p.name = ini.value (QStringLiteral ("Profile/Name")).toString ();
-  p.colorTag = ini.value (QStringLiteral ("Profile/ColorTag")).toString ();
-  p.hotkey = QKeySequence::fromString (ini.value (QStringLiteral ("Profile/Hotkey")).toString ());
-  p.logPath = ini.value (QStringLiteral ("Profile/LogPath")).toString ();
-  p.valid = !p.name.isEmpty ();
+  p.name    = ini.value (QStringLiteral ("Profile/Name")).toString ();
+  p.visible = ini.value (QStringLiteral ("Profile/Visible"), true).toBool ();
+  p.valid   = !p.name.isEmpty ();
   return p;
 }
 
 bool ProfileManager::writeProfileIni (Profile const & p, QSettings & settings) const
 {
-  settings.setValue (QStringLiteral ("Profile/Name"), p.name);
-  settings.setValue (QStringLiteral ("Profile/ColorTag"), p.colorTag);
-  settings.setValue (QStringLiteral ("Profile/Hotkey"), p.hotkey.toString ());
-  settings.setValue (QStringLiteral ("Profile/LogPath"), p.logPath);
+  settings.setValue (QStringLiteral ("Profile/Name"),    p.name);
+  settings.setValue (QStringLiteral ("Profile/Visible"), p.visible);
   settings.sync ();
   return settings.status () == QSettings::NoError;
 }
 
-bool ProfileManager::saveSlot (int /*slotIndex*/)
+bool ProfileManager::saveSlot (int slotIndex)
 {
-  // TODO v0.2: snapshot cfg_ into the slot INI.
-  return false;
+  if (slotIndex < 1 || slotIndex > kMaxSlots) return false;
+  ensureProfilesDirExists ();
+  Profile & p = slots_[slotIndex - 1];
+  if (p.iniPath.isEmpty ())
+    p.iniPath = QStringLiteral ("%1/slot%2.ini").arg (profilesDir_).arg (slotIndex);
+  QSettings ini {p.iniPath, QSettings::IniFormat};
+  writeProfileIni (p, ini);
+  cfg_->snapshotRadioToSettings (ini);
+  return ini.status () == QSettings::NoError;
 }
 
-SwitchResult ProfileManager::switchToSlot (int /*slotIndex*/)
+SwitchResult ProfileManager::switchToSlot (int slotIndex)
 {
-  // TODO v0.2: implement safe-switch protocol (design section 4.3).
-  return SwitchResult::UnknownError;
+  if (slotIndex < 1 || slotIndex > kMaxSlots) return SwitchResult::UnknownError;
+  Profile const & target = slots_[slotIndex - 1];
+  if (!target.valid) return SwitchResult::IniMissing;
+
+  if (active_slot_ >= 1 && active_slot_ <= kMaxSlots)
+    saveSlot (active_slot_);
+
+  emit aboutToSwitch (active_slot_, slotIndex);
+
+  QSettings ini {target.iniPath, QSettings::IniFormat};
+  if (ini.status () != QSettings::NoError) return SwitchResult::IniMissing;
+
+  cfg_->applyRadioFromSettings (ini);
+
+  if (!cfg_->transceiver_online ()) {
+    if (active_slot_ >= 1 && active_slot_ <= kMaxSlots) {
+      QSettings prev {slots_[active_slot_ - 1].iniPath, QSettings::IniFormat};
+      cfg_->applyRadioFromSettings (prev);
+      cfg_->transceiver_online ();
+    }
+    return SwitchResult::CatOpenFailed;
+  }
+
+  active_slot_ = slotIndex;
+  emit switched (slotIndex);
+  return SwitchResult::Ok;
 }
 
-bool ProfileManager::importFromJtdx (QString const & /*jtdxIniPath*/, int /*targetSlot*/)
+void ProfileManager::setSlotVisible (int slotIndex, bool visible)
 {
-  // TODO v0.2: copy JTDX config INI into a WKjTX slot INI.
-  return false;
+  if (slotIndex < 1 || slotIndex > kMaxSlots) return;
+  slots_[slotIndex - 1].visible = visible;
+  if (!slots_[slotIndex - 1].iniPath.isEmpty ()) {
+    QSettings ini {slots_[slotIndex - 1].iniPath, QSettings::IniFormat};
+    ini.setValue (QStringLiteral ("Profile/Visible"), visible);
+  }
+  emit slotsChanged ();
 }
 
-bool ProfileManager::closeCurrentResources ()
+bool ProfileManager::isSlotVisible (int slotIndex) const
 {
-  // TODO v0.2: close CAT, audio, UDP; wait for graceful shutdown.
-  return true;
+  if (slotIndex < 1 || slotIndex > kMaxSlots) return false;
+  return slots_[slotIndex - 1].visible;
 }
 
-bool ProfileManager::openResourcesForSlot (int /*slotIndex*/)
+void ProfileManager::showAllSlots ()
 {
-  // TODO v0.2: open hardware with the new profile's settings.
-  return true;
+  for (int i = 1; i <= kMaxSlots; ++i)
+    setSlotVisible (i, true);
 }
 
-void ProfileManager::rollback (int /*previousSlot*/)
-{
-  // TODO v0.2: roll back to previousSlot after a failed switch.
-}
+bool ProfileManager::closeCurrentResources ()  { return true; }
+bool ProfileManager::openResourcesForSlot (int) { return true; }
+void ProfileManager::rollback (int)             {}
 
 } // namespace wkjtx

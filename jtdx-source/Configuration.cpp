@@ -1180,6 +1180,88 @@ void Configuration::transceiver_offline ()
   m_->close_rig ();
 }
 
+void Configuration::snapshotRadioToSettings (QSettings & dest) const
+{
+  auto & m = *m_;
+  dest.setValue ("Rig",                m.rig_params_.rig_name);
+  dest.setValue ("CATSerialPort",      m.rig_params_.serial_port);
+  dest.setValue ("CATSerialRate",      m.rig_params_.baud);
+  dest.setValue ("CATDataBits",        QVariant::fromValue (m.rig_params_.data_bits));
+  dest.setValue ("CATStopBits",        QVariant::fromValue (m.rig_params_.stop_bits));
+  dest.setValue ("CATHandshake",       QVariant::fromValue (m.rig_params_.handshake));
+  dest.setValue ("CATNetworkPort",     m.rig_params_.network_port);
+  dest.setValue ("CATTCIPort",         m.rig_params_.tci_port);
+  dest.setValue ("CATUSBPort",         m.rig_params_.usb_port);
+  dest.setValue ("CATForceDTR",        m.rig_params_.force_dtr);
+  dest.setValue ("DTR",                m.rig_params_.dtr_high);
+  dest.setValue ("CATForceRTS",        m.rig_params_.force_rts);
+  dest.setValue ("RTS",                m.rig_params_.rts_high);
+  dest.setValue ("TXAudioSource",      QVariant::fromValue (m.rig_params_.audio_source));
+  dest.setValue ("Polling",            m.rig_params_.poll_interval & 0x7fff);
+  dest.setValue ("SplitMode",          QVariant::fromValue (m.rig_params_.split_mode));
+  dest.setValue ("PTTMethod",          QVariant::fromValue (m.rig_params_.ptt_type));
+  dest.setValue ("PTTport",            m.rig_params_.ptt_port);
+  dest.setValue ("SoundInName",        m.audio_input_device_.deviceName ());
+  dest.setValue ("AudioInputChannel",  AudioDevice::toString (m.audio_input_channel_));
+  dest.setValue ("SoundOutName",       m.audio_output_device_.deviceName ());
+  dest.setValue ("AudioOutputChannel", AudioDevice::toString (m.audio_output_channel_));
+  dest.setValue ("TCIAudio",           m.tci_audio_);
+  dest.setValue ("CATRequestSNR",      m.do_snr_);
+  dest.setValue ("CATRequestPower",    m.do_pwr_);
+  dest.setValue ("RigPower",           m.rig_power_);
+  dest.setValue ("RigPower_off",       m.rig_power_off_);
+  dest.setValue ("RigShare_ptt",       m.rig_ptt_share_);
+  dest.sync ();
+}
+
+void Configuration::applyRadioFromSettings (QSettings & src)
+{
+  auto & m = *m_;
+  QString const oldIn  = m.audio_input_device_.deviceName ();
+  QString const oldOut = m.audio_output_device_.deviceName ();
+
+  m.rig_params_.rig_name      = src.value ("Rig").toString ();
+  m.rig_params_.serial_port   = src.value ("CATSerialPort").toString ();
+  m.rig_params_.baud          = src.value ("CATSerialRate").toInt ();
+  m.rig_params_.data_bits     = src.value ("CATDataBits").value<TransceiverFactory::DataBits> ();
+  m.rig_params_.stop_bits     = src.value ("CATStopBits").value<TransceiverFactory::StopBits> ();
+  m.rig_params_.handshake     = src.value ("CATHandshake").value<TransceiverFactory::Handshake> ();
+  m.rig_params_.network_port  = src.value ("CATNetworkPort").toString ();
+  m.rig_params_.tci_port      = src.value ("CATTCIPort").toString ();
+  m.rig_params_.usb_port      = src.value ("CATUSBPort").toString ();
+  m.rig_params_.force_dtr     = src.value ("CATForceDTR").toBool ();
+  m.rig_params_.dtr_high      = src.value ("DTR").toBool ();
+  m.rig_params_.force_rts     = src.value ("CATForceRTS").toBool ();
+  m.rig_params_.rts_high      = src.value ("RTS").toBool ();
+  m.rig_params_.audio_source  = src.value ("TXAudioSource").value<TransceiverFactory::TXAudioSource> ();
+  m.rig_params_.poll_interval = src.value ("Polling").toInt ();
+  m.rig_params_.split_mode    = src.value ("SplitMode").value<TransceiverFactory::SplitMode> ();
+  m.rig_params_.ptt_type      = src.value ("PTTMethod").value<TransceiverFactory::PTTMethod> ();
+  m.rig_params_.ptt_port      = src.value ("PTTport").toString ();
+  m.tci_audio_                = src.value ("TCIAudio").toBool ();
+  m.do_snr_                   = src.value ("CATRequestSNR").toBool ();
+  m.do_pwr_                   = src.value ("CATRequestPower").toBool ();
+  m.rig_power_                = src.value ("RigPower").toBool ();
+  m.rig_power_off_            = src.value ("RigPower_off").toBool ();
+  m.rig_ptt_share_            = src.value ("RigShare_ptt").toBool ();
+
+  QString const newIn  = src.value ("SoundInName").toString ();
+  QString const newOut = src.value ("SoundOutName").toString ();
+  for (auto const & dev : QAudioDeviceInfo::availableDevices (QAudio::AudioInput))
+    if (dev.deviceName () == newIn) { m.audio_input_device_ = dev; break; }
+  for (auto const & dev : QAudioDeviceInfo::availableDevices (QAudio::AudioOutput))
+    if (dev.deviceName () == newOut) { m.audio_output_device_ = dev; break; }
+  m.audio_input_channel_  = AudioDevice::fromString (
+      src.value ("AudioInputChannel", "Mono").toString ());
+  m.audio_output_channel_ = AudioDevice::fromString (
+      src.value ("AudioOutputChannel", "Mono").toString ());
+
+  m.restart_sound_input_device_  = (m.audio_input_device_.deviceName ()  != oldIn);
+  m.restart_sound_output_device_ = (m.audio_output_device_.deviceName () != oldOut);
+
+  m.close_rig ();
+}
+
 void Configuration::transceiver_frequency (Frequency f)
 {
 #if WSJT_TRACE_CAT
