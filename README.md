@@ -8,6 +8,24 @@ operating modes as upstream.
 
 ## What's different from JTDX
 
+- **Auto-call** — *File → Auto-call...* opens a dedicated dialog
+  with a master switch and 7 trigger categories (Alert callsigns,
+  NEW DXCC, NEW CQ zone, NEW ITU zone, NEW grid 4-char, NEW prefix,
+  NEW callsign). When a decoded message matches an active category,
+  WKjTX **transmits a reply automatically**. Five alert-callsign
+  slots for explicit watch lists. Hardcoded safeguards (not
+  user-editable): each callsign called at most once every 120 s,
+  global cap of 3 auto-calls per minute. A flashing badge in the
+  status bar shows when at least one category is ON, so you always
+  know if the station is hot.
+
+  ![Auto-call dialog](docs/screenshots/auto-call-dialog.png)
+
+  > **Use responsibly.** With auto-call ON the station transmits
+  > unattended. You are responsible for staying within your licence
+  > and never leaving an auto-calling station hooked up to a linear
+  > or a timer-driven antenna switch.
+
 - **One-click data refresh**: a single *Update data* button in
   Settings → General fetches `cty.dat`, `state_data.bin`,
   `grid_data.bin` and `lotw-user-activity.csv` from their official
@@ -31,7 +49,7 @@ operating modes as upstream.
   number is no longer exposed.
 
 Planned in later releases: five-slot radio profile quick-switch,
-auto-call triggers, per-profile log routing, qrz.com upload.
+per-profile log routing, qrz.com upload.
 
 ## Download
 
