@@ -7,7 +7,7 @@
 ****************************************************************************/
 
 #define QAX_DUMPCPP_OMNIRIG_NOINLINES
-#include "G:/Claude Local/WKjTX/jtdx-source/build-wkjtx/OmniRig.h"
+#include "OmniRig.h"
 #include <OAIdl.h>
 
 using namespace OmniRig;
