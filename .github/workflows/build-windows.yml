@@ -75,9 +75,10 @@ jobs:
             --prefix="${GITHUB_WORKSPACE}/build-artifacts/hamlib" \
             --disable-shared --enable-static \
             --without-cxx-binding --disable-winradio \
-            --disable-dependency-tracking
-          make -j$(nproc)
-          make install
+            --disable-dependency-tracking \
+            MAKE=mingw32-make
+          mingw32-make -j$(nproc)
+          mingw32-make install
 
       - name: Configure WKjTX
         run: |
