@@ -307,14 +307,30 @@ int main(int argc, char *argv[])
               resources_OK = a.installTranslator (&translator_from_resources);
           } 
 
-          // Load  any matching  translation  from  the current  directory
-          // using the locale name. This allows translators to easily test
-          // their translations  by releasing  (lrelease) a .qm  file into
-          // the    current    directory     with    a    suitable    name
-          // (e.g.  jtdx_et_EE.qm),  then  running   wsjtx  to  view  the
-          // results. Either the system  locale setting or the environment
-          // variable LANG can be used to select the target language.
-          has_style = translator_from_files.load (QString {"jtdx_"} + localeUsedToDeterminateTranslators.name ());
+          // WKjTX 1.0: the bundled resources ship English only. Every
+          // other language is loaded at runtime from a user-managed
+          // translations/ folder so third-party translations can be
+          // added without rebuilding. Search order:
+          //   1. <applicationDirPath>/translations/wkjtx_<locale>.qm
+          //   2. <applicationDirPath>/translations/jtdx_<locale>.qm
+          //      (legacy name — JTDX .qm files dropped in as-is still
+          //      work)
+          //   3. current working directory (developer fallback)
+          QString const translations_dir =
+              QCoreApplication::applicationDirPath ()
+              + QLatin1String ("/translations");
+          QString const locale_name =
+              localeUsedToDeterminateTranslators.name ();
+          has_style = translator_from_files.load (
+              QString {"wkjtx_"} + locale_name, translations_dir);
+          if (!has_style) {
+              has_style = translator_from_files.load (
+                  QString {"jtdx_"} + locale_name, translations_dir);
+          }
+          if (!has_style) {
+              has_style = translator_from_files.load (
+                  QString {"jtdx_"} + locale_name);
+          }
           if (has_style) {
               files_OK = a.installTranslator (&translator_from_files);
           }

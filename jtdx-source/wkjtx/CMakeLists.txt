@@ -39,6 +39,10 @@ set (WKJTX_SOURCES
   AutoCallSettingsDialog.hpp
   AutoCallBadge.cpp
   AutoCallBadge.hpp
+  DataUpdater.cpp
+  DataUpdater.hpp
+  AdifImporter.cpp
+  AdifImporter.hpp
   detectors/Maidenhead.cpp
   detectors/Maidenhead.hpp
   detectors/ZoneTables.hpp

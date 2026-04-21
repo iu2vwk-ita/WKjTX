@@ -3022,16 +3022,16 @@ ZD8,ZD9,ZF,ZK3,ZL,ZL7,ZL8,ZL9,ZP,ZS,ZS8&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</str
                  </size>
                 </property>
                 <property name="toolTip">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Click by left mouse's button shifts JTDX internal time to provide better decoder synchronization to signals into incoming RX audio stream.&lt;br&gt;
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Click by left mouse's button shifts WKjTX internal time to provide better decoder synchronization to signals into incoming RX audio stream.&lt;br&gt;
 Two scenarios are supported:&lt;br&gt;
 - rough synchronization, if there are shifted signals on the waterfall and no a signal decoded, minimum power value is used in decoder to evaluate time shift till beginning of interval&lt;br&gt;
-- more precise synchronization, if there are signals decoded in previous interval and average DT is out of the -0.19 .. 0.19 sec range. Average DT value is used for JTDX time shift.&lt;br&gt;
+- more precise synchronization, if there are signals decoded in previous interval and average DT is out of the -0.19 .. 0.19 sec range. Average DT value is used for WKjTX time shift.&lt;br&gt;
 It is recommended to keep at least five interval gap between two consequential attempts of rough and precise synchronization.&lt;br&gt;
 Decoding of current and next interval can be broken by the time shift.&lt;br&gt;
 Note:&lt;br&gt;
 - if your computer clock difference is more than 7.5 seconds, there is a chance you will be reporting spots in wrong interval, also QSO start/end time can be affected&lt;br&gt;
 - DT of TX signal will be affected in wrong way if you are trying to compensate RX audio stream delay caused by buffering in SDR software.&lt;br&gt;&lt;br&gt;
-Click by right mouse's button sets JTDX internal time back to system time.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+Click by right mouse's button sets WKjTX internal time back to system time.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                 <property name="styleSheet">
                  <string notr="true">QPushButton:checked {
@@ -4901,7 +4901,7 @@ list. The list can be maintained in Settings (F2).</string>
   </action>
   <action name="actionAbout">
    <property name="text">
-    <string>About JTDX</string>
+    <string>About WKjTX</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+F1</string>
@@ -5068,7 +5068,7 @@ list. The list can be maintained in Settings (F2).</string>
   </action>
   <action name="actionJTDX_Web_Site">
    <property name="text">
-    <string>JTDX Web site</string>
+    <string>WKjTX Web site</string>
    </property>
    <property name="shortcut">
     <string>F1</string>
@@ -5325,7 +5325,7 @@ list. The list can be maintained in Settings (F2).</string>
     <bool>true</bool>
    </property>
    <property name="text">
-    <string>JTDX forum</string>
+    <string>WKjTX discussions</string>
    </property>
   </action>
   <action name="actionOpen_log_directory">

@@ -2821,7 +2821,7 @@ void MainWindow::on_pbSpotDXCall_clicked ()
 
 void MainWindow::msgBox(QString t) { msgBox0.setText(t); msgBox0.translate_buttons(); msgBox0.exec(); }
 void MainWindow::on_actionJTDX_Web_Site_triggered() { m_manual.display_html_url (QUrl {PROJECT_MANUAL_DIRECTORY_URL}, PROJECT_MANUAL); }
-void MainWindow::on_actionJTDX_Forum_triggered() { m_manual.display_html_url (QUrl {"https://jtdx.freeforums.net/"}, ""); }
+void MainWindow::on_actionJTDX_Forum_triggered() { m_manual.display_html_url (QUrl {"https://github.com/iu2vwk-ita/WKjTX/discussions"}, ""); }
 
 /*Display local copy of manual
 void MainWindow::on_actionLocal_User_Guide_triggered()
@@ -3332,7 +3332,7 @@ void MainWindow::on_actionKeyboard_shortcuts_triggered()
     m_shortcuts.reset (new HelpTextWindow {tr ("Keyboard Shortcuts"),
                                                //: Keyboard shortcuts help window contents
                                                tr (R"(<table cellspacing=1>
-  <tr><td><b>F1       </b></td><td>Online User's Guide</td><td><b>Ctrl+F1  </b></td><td>About JTDX</td></tr>
+  <tr><td><b>F1       </b></td><td>Online User's Guide</td><td><b>Ctrl+F1  </b></td><td>About WKjTX</td></tr>
   <tr><td><b>F2       </b></td><td>Open configuration window</td></tr>
   <tr><td><b>F3       </b></td><td>Display keyboard shortcuts</td></tr>
   <tr><td><b>F4       </b></td><td>Clear DX Call/Grid and Tx messages</td><td><b>Alt+F4   </b></td><td>Exit program</td></tr>
@@ -4172,16 +4172,16 @@ void MainWindow::set_language (QString const& lang)
     JTDXMessageBox msgbox;
     msgbox.setWindowTitle(tr("Confirm change Language"));
     msgbox.setIcon(JTDXMessageBox::Question);
-    msgbox.setText(tr("Are You sure to change UI Language to English, JTDX will restart?"));
+    msgbox.setText(tr("Are You sure to change UI Language to English, WKjTX will restart?"));
     msgbox.setStandardButtons(JTDXMessageBox::Yes | JTDXMessageBox::No);
     msgbox.setDefaultButton(JTDXMessageBox::No);
     if (olek) {
       tolge = translator.translate("MainWindow","Confirm change Language");
       if (!tolge.isEmpty()) msgbox.setWindowTitle(tolge);
       else msgbox.setWindowTitle("Confirm change Language");
-      tolge = translator.translate("MainWindow","Are You sure to change UI Language to English, JTDX will restart?");
+      tolge = translator.translate("MainWindow","Are You sure to change UI Language to English, WKjTX will restart?");
       if (!tolge.isEmpty()) msgbox.setText(tolge);
-      else msgbox.setText("Are You sure to change UI Language to English, JTDX will restart?");
+      else msgbox.setText("Are You sure to change UI Language to English, WKjTX will restart?");
       tolge = translator.translate("JTDXMessageBox","&Yes");
       if (!tolge.isEmpty()) msgbox.button(JTDXMessageBox::Yes)->setText(tolge);
       else msgbox.button(JTDXMessageBox::Yes)->setText("&Yes");
@@ -4350,7 +4350,7 @@ void MainWindow::guiUpdate()
         onAirFreq0=onAirFreq;
         if (onAirFreq > f_from and onAirFreq < f_to) {
           auto const& message1 = tr ("Please choose another Tx frequency."
-                                  " JTDX will not knowingly transmit another"
+                                  " WKjTX will not knowingly transmit another"
                                   " mode in the WSPR sub-band.");
 #if QT_VERSION >= 0x050400
           QTimer::singleShot (0, [=] { // don't block guiUpdate
@@ -4361,7 +4361,7 @@ void MainWindow::guiUpdate()
 #endif
         } else {
           auto const& message1 = tr ("Please choose another Tx frequency."
-                                  " JTDX will not allow to Call below 1000 Hz"
+                                  " WKjTX will not allow to Call below 1000 Hz"
                                   " in DXped mode.");
 #if QT_VERSION >= 0x050400
           QTimer::singleShot (0, [=] { // don't block guiUpdate

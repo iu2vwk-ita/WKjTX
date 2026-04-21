@@ -80,7 +80,7 @@ void QrzUploader::uploadAdif (QString const & adifRecord)
   req.setHeader (QNetworkRequest::ContentTypeHeader,
                  QStringLiteral ("application/x-www-form-urlencoded"));
   req.setHeader (QNetworkRequest::UserAgentHeader,
-                 QStringLiteral ("WKjTX/1.0 (+https://github.com/IU2VWK/WKjTX)"));
+                 QStringLiteral ("WKjTX/1.0 (+https://github.com/iu2vwk-ita/WKjTX)"));
 
   QUrlQuery body;
   body.addQueryItem (QStringLiteral ("KEY"),    apiKey_);

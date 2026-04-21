@@ -46,7 +46,7 @@ void EQSL::upload(QString const& eqsl_username, QString const& eqsl_passwd, QStr
     myadif="<ADIF_VER:5>2.1.9";
     myadif+="<EQSL_USER:" + QString::number(eqsl_username.length()) + ">" + eqsl_username;
     myadif+="<EQSL_PSWD:" + QString::number(eqsl_passwd.length()) + ">" + eqsl_passwd;
-    myadif+="<PROGRAMID:4>JTDX<EOH><APP_EQSL_QTH_NICKNAME:" + QString::number(eqsl_nickname.length()) + ">" + eqsl_nickname;
+    myadif+="<PROGRAMID:5>WKjTX<EOH><APP_EQSL_QTH_NICKNAME:" + QString::number(eqsl_nickname.length()) + ">" + eqsl_nickname;
     myadif+="<CALL:" + QString::number(call.length()) + ">" + call;
     myadif+="<MODE:"  + QString::number(mode.length()) + ">" + mode;
     myadif+="<QSO_DATE:8>" + QSO_date_on.date().toString("yyyyMMdd");

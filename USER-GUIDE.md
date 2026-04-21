@@ -34,7 +34,7 @@ triggers.
 ### Install
 
 Download the latest `wkjtx-setup-<version>-win64.exe` from the
-[releases page](https://github.com/IU2VWK/WKjTX/releases). Run the
+[releases page](https://github.com/iu2vwk-ita/WKjTX/releases). Run the
 installer. Default install directory is `C:\Program Files\WKjTX\`.
 
 On first launch Windows may show a SmartScreen warning because the

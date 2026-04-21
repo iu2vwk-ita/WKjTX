@@ -174,7 +174,7 @@ for full context.
 
 When you want WKjTX public, tell me and I'll:
 
-1. Create `https://github.com/IU2VWK/WKjTX` (or whichever org/name you
+1. Create `https://github.com/iu2vwk-ita/WKjTX` (or whichever org/name you
    choose — ask first).
 2. `git remote add origin <url>` and `git push -u origin main`.
 3. Update `PROJECT_HOMEPAGE` in CMakeLists.txt if the URL differs from

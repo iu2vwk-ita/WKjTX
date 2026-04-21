@@ -328,24 +328,76 @@
              <number>3</number>
             </property>
             <item row="0" column="2">
-             <widget class="QPushButton" name="font_push_button">
-              <property name="toolTip">
-               <string>Set the font characteristics for the application.</string>
+             <layout class="QHBoxLayout" name="app_font_h_layout">
+              <property name="spacing">
+               <number>4</number>
               </property>
-              <property name="text">
-               <string>Application Font...</string>
-              </property>
-             </widget>
+              <item>
+               <widget class="QPushButton" name="font_push_button">
+                <property name="toolTip">
+                 <string>Set the font characteristics for the application.</string>
+                </property>
+                <property name="text">
+                 <string>Application Font...</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QSpinBox" name="app_font_size_spin_box">
+                <property name="toolTip">
+                 <string>Application font point size. Change takes effect after pressing OK.</string>
+                </property>
+                <property name="suffix">
+                 <string> pt</string>
+                </property>
+                <property name="minimum">
+                 <number>6</number>
+                </property>
+                <property name="maximum">
+                 <number>32</number>
+                </property>
+                <property name="value">
+                 <number>9</number>
+                </property>
+               </widget>
+              </item>
+             </layout>
             </item>
             <item row="1" column="2">
-             <widget class="QPushButton" name="decoded_text_font_push_button">
-              <property name="toolTip">
-               <string>Set the font characteristics for the Band Activity and Rx Frequency areas.</string>
+             <layout class="QHBoxLayout" name="decoded_font_h_layout">
+              <property name="spacing">
+               <number>4</number>
               </property>
-              <property name="text">
-               <string>Decoded Text Font...</string>
-              </property>
-             </widget>
+              <item>
+               <widget class="QPushButton" name="decoded_text_font_push_button">
+                <property name="toolTip">
+                 <string>Set the font characteristics for the Band Activity and Rx Frequency areas.</string>
+                </property>
+                <property name="text">
+                 <string>Decoded Text Font...</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QSpinBox" name="decoded_text_font_size_spin_box">
+                <property name="toolTip">
+                 <string>Decoded messages font point size. Change takes effect after pressing OK.</string>
+                </property>
+                <property name="suffix">
+                 <string> pt</string>
+                </property>
+                <property name="minimum">
+                 <number>6</number>
+                </property>
+                <property name="maximum">
+                 <number>32</number>
+                </property>
+                <property name="value">
+                 <number>10</number>
+                </property>
+               </widget>
+              </item>
+             </layout>
             </item>
             <item row="1" column="1">
              <widget class="QCheckBox" name="scroll_check_box">
@@ -667,6 +719,204 @@ It will not interfere with other users as it is always sent in the
 quiet period when decoding is done.</string>
               </property>
              </widget>
+            </item>
+           </layout>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="data_update_group_box">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="title">
+          <string>Data updates</string>
+         </property>
+         <layout class="QGridLayout" name="data_update_layout">
+          <property name="leftMargin">
+           <number>6</number>
+          </property>
+          <property name="topMargin">
+           <number>6</number>
+          </property>
+          <property name="rightMargin">
+           <number>6</number>
+          </property>
+          <property name="bottomMargin">
+           <number>6</number>
+          </property>
+          <property name="horizontalSpacing">
+           <number>6</number>
+          </property>
+          <property name="verticalSpacing">
+           <number>6</number>
+          </property>
+          <item row="0" column="0">
+           <widget class="QLabel" name="cty_url_label">
+            <property name="minimumSize">
+             <size><width>0</width><height>24</height></size>
+            </property>
+            <property name="text">
+             <string>cty.dat URL:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="1">
+           <widget class="QLineEdit" name="cty_url_line_edit">
+            <property name="minimumSize">
+             <size><width>0</width><height>24</height></size>
+            </property>
+            <property name="toolTip">
+             <string>Source URL for cty.dat (country/prefix data). Editable — revert to default by clearing and re-opening the dialog.</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLabel" name="state_url_label">
+            <property name="minimumSize">
+             <size><width>0</width><height>24</height></size>
+            </property>
+            <property name="text">
+             <string>state_data.bin URL:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QLineEdit" name="state_url_line_edit">
+            <property name="minimumSize">
+             <size><width>0</width><height>24</height></size>
+            </property>
+            <property name="toolTip">
+             <string>Source URL for state_data.bin (US states lookup).</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="0">
+           <widget class="QLabel" name="grid_url_label">
+            <property name="minimumSize">
+             <size><width>0</width><height>24</height></size>
+            </property>
+            <property name="text">
+             <string>grid_data.bin URL:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="2" column="1">
+           <widget class="QLineEdit" name="grid_url_line_edit">
+            <property name="minimumSize">
+             <size><width>0</width><height>24</height></size>
+            </property>
+            <property name="toolTip">
+             <string>Source URL for grid_data.bin (Maidenhead grid geometry).</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="0">
+           <widget class="QLabel" name="lotw_url_label">
+            <property name="minimumSize">
+             <size><width>0</width><height>24</height></size>
+            </property>
+            <property name="text">
+             <string>LoTW users CSV URL:</string>
+            </property>
+           </widget>
+          </item>
+          <item row="3" column="1">
+           <widget class="QLineEdit" name="lotw_url_line_edit">
+            <property name="minimumSize">
+             <size><width>0</width><height>24</height></size>
+            </property>
+            <property name="toolTip">
+             <string>Source URL for the LoTW user activity CSV.</string>
+            </property>
+           </widget>
+          </item>
+          <item row="4" column="0" colspan="2">
+           <widget class="QLabel" name="data_update_status_label">
+            <property name="minimumSize">
+             <size><width>0</width><height>22</height></size>
+            </property>
+            <property name="text">
+             <string>Last update: never</string>
+            </property>
+            <property name="wordWrap">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="5" column="0" colspan="2">
+           <layout class="QHBoxLayout" name="data_update_buttons_layout">
+            <property name="spacing">
+             <number>6</number>
+            </property>
+            <item>
+             <widget class="QPushButton" name="update_data_push_button">
+              <property name="minimumSize">
+               <size><width>0</width><height>26</height></size>
+              </property>
+              <property name="toolTip">
+               <string>Download cty.dat, state_data.bin, grid_data.bin and the LoTW user list from the URLs above.</string>
+              </property>
+              <property name="text">
+               <string>Update data</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="update_hamlib_push_button">
+              <property name="minimumSize">
+               <size><width>0</width><height>26</height></size>
+              </property>
+              <property name="toolTip">
+               <string>Open the Hamlib downloads page in your browser. Replace bin\libhamlib-5.dll manually after download.</string>
+              </property>
+              <property name="text">
+               <string>Update Hamlib...</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="import_adif_push_button">
+              <property name="minimumSize">
+               <size><width>0</width><height>26</height></size>
+              </property>
+              <property name="toolTip">
+               <string>Import QSOs from an ADIF (.adi/.adif) log file into the internal wsjtx_log.adi. Duplicates are skipped (match on CALL+QSO_DATE+BAND+MODE).</string>
+              </property>
+              <property name="text">
+               <string>Import ADIF...</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QPushButton" name="export_adif_push_button">
+              <property name="minimumSize">
+               <size><width>0</width><height>26</height></size>
+              </property>
+              <property name="toolTip">
+               <string>Export the internal log (wsjtx_log.adi) to an ADIF file of your choice.</string>
+              </property>
+              <property name="text">
+               <string>Export ADIF...</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_data_update">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
             </item>
            </layout>
           </item>
@@ -2453,7 +2703,7 @@ comments field.</string>
                 <item row="6" column="0">
                  <widget class="QCheckBox" name="clear_DX_exit_check_box">
                   <property name="toolTip">
-                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Check this option to force the clearing of the DX Call and DX Grid fields when exiting JTDX. This functionality is intended for UR5EQF logbook software users.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Check this option to force the clearing of the DX Call and DX Grid fields when exiting WKjTX. This functionality is intended for UR5EQF logbook software users.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                   </property>
                   <property name="text">
                    <string>Clear DX call and grid on exit</string>
@@ -2964,7 +3214,7 @@ for assessing propagation and system performance.</string>
                   <item row="1" column="1">
                    <widget class="QSpinBox" name="udp_server_port_spin_box">
                     <property name="toolTip">
-                     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enter the service port number of the UDP server that JTDX should send updates to. If this is zero no updates will be broadcast.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Enter the service port number of the UDP server that WKjTX should send updates to. If this is zero no updates will be broadcast.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                     </property>
                     <property name="minimum">
                      <number>0</number>
@@ -2981,7 +3231,7 @@ for assessing propagation and system performance.</string>
                   <item>
                    <widget class="QCheckBox" name="accept_udp_requests_check_box">
                     <property name="toolTip">
-                     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;With this enabled JTDX will accept certain requests back from a UDP server that receives decode messages.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;With this enabled WKjTX will accept certain requests back from a UDP server that receives decode messages.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                     </property>
                     <property name="text">
                      <string>Accept UDP requests</string>
@@ -3035,7 +3285,7 @@ for assessing propagation and system performance.</string>
               <item>
                <widget class="QCheckBox" name="filterUDP_check_box">
                 <property name="toolTip">
-                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Selected text filters will be applied to limit transmission of the UDP messages from JTDX, for instance messages from some continents can be blocked.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Selected text filters will be applied to limit transmission of the UDP messages from WKjTX, for instance messages from some continents can be blocked.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                 <property name="text">
                  <string>Apply text filters to transmission of the UDP messages</string>

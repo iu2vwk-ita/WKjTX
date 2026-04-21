@@ -59,10 +59,10 @@ else ()
   set (PROJECT_CONTACT "IU2VWK <iu2vwk@gmail.com>")
   set (PROJECT_COPYRIGHT "WKjTX additions © 2026 IU2VWK. JTDX © 2016–2022 UA3DJY/ES1JA. WSJT-X © 2001–2022 K1JT et al. GPL-3.0.")
 endif (WIN32)
-set (PROJECT_HOMEPAGE https://github.com/IU2VWK/WKjTX)
+set (PROJECT_HOMEPAGE https://github.com/iu2vwk-ita/WKjTX)
 set (PROJECT_MANUAL USER-GUIDE.md)
-set (PROJECT_MANUAL_DIRECTORY_URL https://github.com/IU2VWK/WKjTX)
-set (PROJECT_SAMPLES_URL https://github.com/IU2VWK/WKjTX/releases)
+set (PROJECT_MANUAL_DIRECTORY_URL https://github.com/iu2vwk-ita/WKjTX)
+set (PROJECT_SAMPLES_URL https://github.com/iu2vwk-ita/WKjTX/releases)
 set (PROJECT_SAMPLES_UPLOAD_DEST frs.sourceforge.net:/home/frs/project/wsjt/)
 set (PROJECT_SUMMARY_DESCRIPTION "${PROJECT_NAME} - Digital Modes for Amateur Radio.")
 set (PROJECT_DESCRIPTION "WKjTX: Digital Modes for Weak Signal Communications in Amateur Radio (JTDX fork)")
@@ -970,26 +970,12 @@ add_custom_target (etags COMMAND ${ETAGS} -o ${CMAKE_SOURCE_DIR}/TAGS -R ${sourc
 
 
 # Qt i18n
+# WKjTX 1.0: ship English only. User-contributed translations are loaded
+# at runtime from the "translations/" directory next to the executable
+# (see main.cpp). Drop a compiled jtdx_<locale>.qm there to enable a
+# language without a rebuild.
 set (LANGUAGES
   en_US
-  ru_RU
-  et_EE
-  es_ES
-  hr_HR
-  hu_HU
-  fr_FR
-  it_IT
-  lv_LV
-  nl_NL
-  pl_PL
-  pt_PT
-  pt_BR
-  zh_HK
-  zh_CN
-  ja_JP
-  ca_ES
-  da_DK
-  sv_SE
   )
 foreach (lang_ ${LANGUAGES})
   file (TO_NATIVE_PATH translations/jtdx_${lang_}.ts ts_)
@@ -1577,6 +1563,29 @@ if (NOT is_debug_build)
         fixup_bundle (\"\${the_exe}\" \"\${QTPLUGINS}\" \"${fixup_library_dirs}\")"
       #COMPONENT runtime
       )
+
+    # WKjTX: Qt5 Network loads OpenSSL 3 via LoadLibrary at runtime,
+    # so fixup_bundle (which walks static PE imports) never copies
+    # libssl-3-x64.dll / libcrypto-3-x64.dll. Without them QSslSocket
+    # prints "TLS initialization failed" and every HTTPS download
+    # (state_data.bin, grid_data.bin, lotw-user-activity.csv) aborts.
+    # Install them explicitly so portable builds ship with TLS.
+    if (WIN32)
+      set (_wkjtx_openssl_candidates
+        libssl-3-x64.dll
+        libcrypto-3-x64.dll
+        )
+      # Qt5::Network's CONFIG module exposes the Qt bin dir; fall
+      # back to QT_DATA_DIR heuristics if that cache var is not set.
+      get_target_property (_wkjtx_qt_core_loc Qt5::Core LOCATION)
+      get_filename_component (_wkjtx_qt_bin "${_wkjtx_qt_core_loc}" DIRECTORY)
+      foreach (_dll ${_wkjtx_openssl_candidates})
+        if (EXISTS "${_wkjtx_qt_bin}/${_dll}")
+          install (FILES "${_wkjtx_qt_bin}/${_dll}"
+                   DESTINATION ${CMAKE_INSTALL_BINDIR})
+        endif ()
+      endforeach ()
+    endif ()
   endif (APPLE OR WIN32)
 
 endif (NOT is_debug_build)

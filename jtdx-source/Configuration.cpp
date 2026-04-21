@@ -179,6 +179,12 @@
 #include "StationList.hpp"
 #include "NetworkServerLookup.hpp"
 #include "JTDXMessageBox.hpp"
+#include "wkjtx/DataUpdater.hpp"
+#include "wkjtx/AdifImporter.hpp"
+
+#include <QDateTime>
+#include <QDesktopServices>
+#include <QNetworkAccessManager>
 
 #include "pimpl_impl.hpp"
 
@@ -445,6 +451,21 @@ private:
   Q_SLOT void on_rig_combo_box_currentIndexChanged (int);
   Q_SLOT void on_refresh_push_button_clicked ();
   Q_SLOT void on_tci_audio_check_box_clicked(bool checked);
+
+  // WKjTX: single-click UPDATE DATA handlers (General tab, bottom).
+  Q_SLOT void on_update_data_push_button_clicked ();
+  Q_SLOT void on_update_hamlib_push_button_clicked ();
+  Q_SLOT void data_update_file_started (QString const& filename);
+  Q_SLOT void data_update_file_finished (QString const& filename,
+                                         bool success,
+                                         QString const& message);
+  Q_SLOT void data_update_all_finished (bool overallSuccess,
+                                        QString const& summary);
+
+  // WKjTX: logbook import/export (General tab, bottom).
+  Q_SLOT void on_import_adif_push_button_clicked ();
+  Q_SLOT void on_export_adif_push_button_clicked ();
+
   Q_SLOT void on_sound_input_combo_box_currentTextChanged (QString const&);
   Q_SLOT void on_sound_output_combo_box_currentTextChanged (QString const&);
   Q_SLOT void on_add_macro_push_button_clicked (bool = false);
@@ -876,8 +897,19 @@ private:
   QAudioDeviceInfo audio_output_device_;
   bool default_audio_output_device_selected_;
   AudioDevice::Channel audio_output_channel_;
-  
-  
+
+  // WKjTX — runtime data-file updater (cty.dat, state_data.bin,
+  // grid_data.bin, lotw-user-activity.csv). Uses a dialog-local
+  // QNetworkAccessManager so downloads keep working while the
+  // settings dialog is open without threading the main-window QNAM
+  // through Configuration's public API.
+  QNetworkAccessManager * data_update_nam_;
+  DataUpdater * data_updater_;
+  QString cty_url_;
+  QString state_data_url_;
+  QString grid_data_url_;
+  QString lotw_url_;
+  QDateTime data_last_update_;
 
   friend class Configuration;
 };
@@ -1365,6 +1397,8 @@ Configuration::impl::impl (Configuration * self, QSettings * settings, QWidget *
   , transceiver_command_number_ {0}
   , default_audio_input_device_selected_ {false}
   , default_audio_output_device_selected_ {false}
+  , data_update_nam_ {new QNetworkAccessManager {this}}
+  , data_updater_ {new DataUpdater {data_update_nam_, this}}
 {
   ui_->setupUi (this);
 
@@ -1696,6 +1730,14 @@ Configuration::impl::impl (Configuration * self, QSettings * settings, QWidget *
   transceiver_thread_ = new QThread {this};
   transceiver_thread_->start ();
 
+  // WKjTX: UPDATE DATA wiring. DataUpdater signals drive status
+  // label + buttons reenable. Slots are implemented further down.
+  connect (data_updater_, &DataUpdater::fileStarted,
+           this, &Configuration::impl::data_update_file_started);
+  connect (data_updater_, &DataUpdater::fileFinished,
+           this, &Configuration::impl::data_update_file_finished);
+  connect (data_updater_, &DataUpdater::allFinished,
+           this, &Configuration::impl::data_update_all_finished);
 }
 
 Configuration::impl::~impl ()
@@ -2166,6 +2208,29 @@ void Configuration::impl::read_settings ()
   SettingsGroup g {settings_, "Configuration"};
   restoreGeometry (settings_->value ("window/geometry").toByteArray ());
 
+  // WKjTX UPDATE DATA: URLs + last-run timestamp. Defaults fall back
+  // to well-known upstream sources (see DataUpdater static getters).
+  cty_url_       = settings_->value ("DataUpdateCtyUrl",   DataUpdater::defaultCtyUrl ()).toString ();
+  state_data_url_ = settings_->value ("DataUpdateStateUrl", DataUpdater::defaultStateUrl ()).toString ();
+  grid_data_url_ = settings_->value ("DataUpdateGridUrl",  DataUpdater::defaultGridUrl ()).toString ();
+  lotw_url_      = settings_->value ("DataUpdateLotwUrl",  DataUpdater::defaultLotwUrl ()).toString ();
+  data_last_update_ = settings_->value ("DataUpdateLast", QDateTime {}).toDateTime ();
+
+  ui_->cty_url_line_edit->setText (cty_url_);
+  ui_->state_url_line_edit->setText (state_data_url_);
+  ui_->grid_url_line_edit->setText (grid_data_url_);
+  ui_->lotw_url_line_edit->setText (lotw_url_);
+  if (data_last_update_.isValid ())
+    {
+      ui_->data_update_status_label->setText
+        (tr ("Last update: %1")
+           .arg (data_last_update_.toLocalTime ().toString (Qt::DefaultLocaleShortDate)));
+    }
+  else
+    {
+      ui_->data_update_status_label->setText (tr ("Last update: never"));
+    }
+
   my_callsign_ = settings_->value ("MyCall", "").toString ();
   my_grid_ = settings_->value ("MyGrid", "").toString ();
 
@@ -2231,6 +2296,20 @@ void Configuration::impl::read_settings ()
     {
       next_decoded_text_font_ = decoded_text_font_;
     }
+
+  // WKjTX: mirror current font point sizes into the General-tab
+  // spinboxes so the user sees a numeric readout and can tweak
+  // size directly without opening the full font picker.
+  {
+    int pt = next_font_.pointSize ();
+    if (pt <= 0) pt = 9;
+    ui_->app_font_size_spin_box->setValue (pt);
+  }
+  {
+    int pt = next_decoded_text_font_.pointSize ();
+    if (pt <= 0) pt = 10;
+    ui_->decoded_text_font_size_spin_box->setValue (pt);
+  }
 
   id_interval_ = settings_->value ("IDint", 0).toInt (); if(!(id_interval_>=0 && id_interval_<=99)) id_interval_=0;
   ntrials_ = settings_->value ("nTrials", 3).toInt (); if(!(ntrials_>=1 && ntrials_<=8)) ntrials_=3;
@@ -2614,6 +2693,13 @@ void Configuration::set_jtdxtime (JTDXDateTime * jtdxtime)
 void Configuration::impl::write_settings ()
 {
   SettingsGroup g {settings_, "Configuration"};
+
+  // WKjTX UPDATE DATA: URLs + timestamp.
+  settings_->setValue ("DataUpdateCtyUrl",   cty_url_);
+  settings_->setValue ("DataUpdateStateUrl", state_data_url_);
+  settings_->setValue ("DataUpdateGridUrl",  grid_data_url_);
+  settings_->setValue ("DataUpdateLotwUrl",  lotw_url_);
+  settings_->setValue ("DataUpdateLast",     data_last_update_);
 
   settings_->setValue ("MyCall", my_callsign_);
   settings_->setValue ("MyGrid", my_grid_);
@@ -3153,7 +3239,38 @@ void Configuration::impl::accept ()
                                 // the underlying models before we
                                 // access them
 
+  // WKjTX UPDATE DATA: commit URL edits. An empty field reverts to
+  // the upstream default the next time read_settings() runs.
+  {
+    QString t;
+    t = ui_->cty_url_line_edit->text ().trimmed ();
+    cty_url_ = t.isEmpty () ? DataUpdater::defaultCtyUrl () : t;
+    t = ui_->state_url_line_edit->text ().trimmed ();
+    state_data_url_ = t.isEmpty () ? DataUpdater::defaultStateUrl () : t;
+    t = ui_->grid_url_line_edit->text ().trimmed ();
+    grid_data_url_ = t.isEmpty () ? DataUpdater::defaultGridUrl () : t;
+    t = ui_->lotw_url_line_edit->text ().trimmed ();
+    lotw_url_ = t.isEmpty () ? DataUpdater::defaultLotwUrl () : t;
+  }
+
   sync_transceiver (true);	// force an update
+
+  // WKjTX: apply spinbox font-size overrides on top of whatever the
+  // QFontDialog staged into next_font_ / next_decoded_text_font_.
+  // The user-facing contract is that the spinbox is authoritative
+  // for size; family/weight still come from the picker.
+  {
+    int app_pt = ui_->app_font_size_spin_box->value ();
+    if (app_pt > 0 && app_pt != next_font_.pointSize ())
+      {
+        next_font_.setPointSize (app_pt);
+      }
+    int dec_pt = ui_->decoded_text_font_size_spin_box->value ();
+    if (dec_pt > 0 && dec_pt != next_decoded_text_font_.pointSize ())
+      {
+        next_decoded_text_font_.setPointSize (dec_pt);
+      }
+  }
 
   //
   // from here on we are bound to accept the new configuration
@@ -4949,6 +5066,172 @@ void Configuration::impl::on_tci_audio_check_box_clicked(bool checked)
 {
   tci_audio_ = checked;
 }
+
+// ---------------------------------------------------------------
+// WKjTX UPDATE DATA slots
+// ---------------------------------------------------------------
+
+void Configuration::impl::on_update_data_push_button_clicked ()
+{
+  if (data_updater_->isBusy ())
+    {
+      return;
+    }
+
+  // Take URLs from the edits so the user can tweak them without
+  // having to OK the dialog first. Empty reverts to upstream default.
+  auto readUrl = [] (QLineEdit * edit, QString const& fallback) {
+    QString t = edit->text ().trimmed ();
+    return QUrl {t.isEmpty () ? fallback : t};
+  };
+
+  data_updater_->setUrls (readUrl (ui_->cty_url_line_edit,   DataUpdater::defaultCtyUrl ()),
+                          readUrl (ui_->state_url_line_edit, DataUpdater::defaultStateUrl ()),
+                          readUrl (ui_->grid_url_line_edit,  DataUpdater::defaultGridUrl ()),
+                          readUrl (ui_->lotw_url_line_edit,  DataUpdater::defaultLotwUrl ()));
+
+  ui_->update_data_push_button->setEnabled (false);
+  ui_->data_update_status_label->setText (tr ("Updating..."));
+
+  data_updater_->updateAll ();
+}
+
+void Configuration::impl::on_update_hamlib_push_button_clicked ()
+{
+  // Hamlib directory listing: open in the user's default browser so
+  // they can pick the latest build. Manual DLL swap instructions are
+  // in the tooltip and LEGGIMI.txt of the portable distribution.
+  QDesktopServices::openUrl
+    (QUrl {"https://sourceforge.net/projects/jtdx/files/hamlib/"});
+}
+
+void Configuration::impl::data_update_file_started (QString const& filename)
+{
+  ui_->data_update_status_label->setText
+    (tr ("Downloading %1...").arg (filename));
+}
+
+void Configuration::impl::data_update_file_finished (QString const& filename,
+                                                     bool success,
+                                                     QString const& message)
+{
+  Q_UNUSED (filename);
+  Q_UNUSED (success);
+  Q_UNUSED (message);
+  // No per-file UI beyond the running status line. Final summary is
+  // shown by data_update_all_finished().
+}
+
+void Configuration::impl::data_update_all_finished (bool overallSuccess,
+                                                    QString const& summary)
+{
+  ui_->update_data_push_button->setEnabled (true);
+
+  if (overallSuccess)
+    {
+      data_last_update_ = QDateTime::currentDateTime ();
+      ui_->data_update_status_label->setText
+        (tr ("Last update: %1 — all files OK")
+           .arg (data_last_update_.toLocalTime ().toString (Qt::DefaultLocaleShortDate)));
+    }
+  else
+    {
+      ui_->data_update_status_label->setText
+        (tr ("Update finished with errors — see details below."));
+      JTDXMessageBox::warning_message (this, tr ("Data update"),
+                                       tr ("Some files failed to update."),
+                                       QString {},
+                                       summary);
+    }
+}
+
+void Configuration::impl::on_import_adif_push_button_clicked ()
+{
+  QString const startDir = QStandardPaths::writableLocation (QStandardPaths::DocumentsLocation);
+  QString const sourcePath = QFileDialog::getOpenFileName (
+      this, tr ("Import ADIF log"),
+      startDir,
+      tr ("ADIF files (*.adi *.adif);;All files (*)"));
+  if (sourcePath.isEmpty ())
+    {
+      return;
+    }
+
+  // Destination is the internal wsjtx_log.adi inside
+  // QStandardPaths::DataLocation — same path LogBook reads from.
+  QString const destDir = QStandardPaths::writableLocation (QStandardPaths::DataLocation);
+  QDir {}.mkpath (destDir);
+  QString const destPath = destDir + QLatin1String ("/wsjtx_log.adi");
+
+  AdifImporter::Stats stats = AdifImporter::run (sourcePath, destPath);
+
+  if (!stats.ok)
+    {
+      JTDXMessageBox::critical_message (this, tr ("Import ADIF"),
+                                        tr ("Import failed."),
+                                        stats.errorMessage);
+      return;
+    }
+
+  QString const summary = tr ("Read: %1\nImported: %2\nDuplicates skipped: %3\nMalformed (missing CALL/DATE/BAND/MODE): %4")
+      .arg (stats.totalRead)
+      .arg (stats.imported)
+      .arg (stats.duplicates)
+      .arg (stats.malformed);
+  JTDXMessageBox::information_message (this, tr ("Import ADIF"),
+                                       tr ("Import complete."),
+                                       QString {},
+                                       summary);
+}
+
+void Configuration::impl::on_export_adif_push_button_clicked ()
+{
+  QString const logPath = QStandardPaths::writableLocation (QStandardPaths::DataLocation)
+                          + QLatin1String ("/wsjtx_log.adi");
+  if (!QFile::exists (logPath))
+    {
+      JTDXMessageBox::warning_message (this, tr ("Export ADIF"),
+                                       tr ("No log file to export yet."),
+                                       tr ("Expected at: %1").arg (logPath));
+      return;
+    }
+
+  QString const startPath =
+      QStandardPaths::writableLocation (QStandardPaths::DocumentsLocation)
+      + QLatin1String ("/wkjtx_log_")
+      + QDateTime::currentDateTime ().toString ("yyyyMMdd_HHmmss")
+      + QLatin1String (".adi");
+  QString const destPath = QFileDialog::getSaveFileName (
+      this, tr ("Export ADIF log"),
+      startPath,
+      tr ("ADIF files (*.adi *.adif);;All files (*)"));
+  if (destPath.isEmpty ())
+    {
+      return;
+    }
+
+  // Overwrite requested file. QFile::copy refuses to overwrite so
+  // remove first; safe because the user picked the target via
+  // getSaveFileName which already confirmed any overwrite.
+  if (QFile::exists (destPath))
+    {
+      QFile::remove (destPath);
+    }
+  if (!QFile::copy (logPath, destPath))
+    {
+      JTDXMessageBox::critical_message (this, tr ("Export ADIF"),
+                                        tr ("Could not write the file."),
+                                        destPath);
+      return;
+    }
+
+  QFileInfo fi {destPath};
+  JTDXMessageBox::information_message (this, tr ("Export ADIF"),
+                                       tr ("Export complete."),
+                                       QString {},
+                                       tr ("%1 (%2 bytes)").arg (fi.fileName ()).arg (fi.size ()));
+}
+
 
 void Configuration::impl::on_sound_input_combo_box_currentTextChanged (QString const& text)
 {
