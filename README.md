@@ -26,6 +26,11 @@ operating modes as upstream.
   > and never leaving an auto-calling station hooked up to a linear
   > or a timer-driven antenna switch.
 
+- **More reliable CQ / QSO responses**: the auto-sequencer no longer
+  drops replies in marginal copy and no longer gets stuck in endless
+  CQ loops. You answer the station that just answered you, and you
+  stop calling CQ when nobody's coming back — the way it should
+  always have worked.
 - **One-click data refresh**: a single *Update data* button in
   Settings → General fetches `cty.dat`, `state_data.bin`,
   `grid_data.bin` and `lotw-user-activity.csv` from their official
