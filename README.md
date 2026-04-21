@@ -47,14 +47,20 @@ operating modes as upstream.
   accepted as-is. See
   [`bin/translations/README.txt`](bin/translations/README.txt) in
   each release.
+- **5 UI themes** selectable from the *Tema* menu: **Amber Classic**
+  (default warm dark), **Amber Night** (deeper black), **Amber High
+  Contrast**, **Native** (OS default style) and **Dark (legacy JTDX)**.
+  The active theme is persisted across sessions.
+- **3-slot radio profile quick-switch**: three buttons in the menubar
+  corner (next to Help) each store a complete CAT + audio profile. Click
+  to switch instantly; right-click to configure, rename, hide or clear.
 - **Hamlib updater** opens the JTDX SourceForge Hamlib directory in
   your browser — manual drop-in of `libhamlib-5.dll` with an
   automatic `_old` backup slot.
 - **Version reset to 1.0.0.** The upstream JTDX 2.2.x version
   number is no longer exposed.
 
-Planned in later releases: five-slot radio profile quick-switch,
-per-profile log routing, qrz.com upload.
+Planned in later releases: per-profile log routing, qrz.com upload.
 
 ## Download
 
