@@ -92,6 +92,7 @@ jobs:
             -DCMAKE_PREFIX_PATH="${WS}/build-artifacts/hamlib" \
             -DCMAKE_INSTALL_PREFIX="${WS}/build-artifacts/wkjtx" \
             -DWKJTX_BUILD_TESTS=ON \
+            -DWKJTX_USE_PREBUILT_OMNIRIG=ON \
             -DWSJT_GENERATE_DOCS=OFF \
             -DCMAKE_Fortran_FLAGS="-fallow-argument-mismatch" \
             ..

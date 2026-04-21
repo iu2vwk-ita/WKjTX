@@ -677,13 +677,19 @@ set_property (SOURCE ${all_C_and_CXXSRCS} APPEND PROPERTY OBJECT_DEPENDS wsjtx_c
 if (WIN32)
   # generate the OmniRig COM interface source.
   #
-  # WKjTX patch: AXSERVER can be passed directly from the command line
-  # via -DAXSERVER="C:/path/to/OmniRig.exe". When set, we skip the
-  # registry-based `dumpcpp -getfile {CLSID}` lookup. This is needed on
-  # 64-bit Windows where OmniRig (32-bit) registers only in the
-  # WOW6432Node view, which 64-bit dumpcpp cannot see. Passing the
-  # typelib host file directly works regardless of bitness.
-  if (NOT AXSERVER)
+  # WKjTX patch: two ways to satisfy this besides the original registry lookup:
+  #   1. -DAXSERVER="C:/path/to/OmniRig.exe" → skip registry, run dumpcpp
+  #      on the given typelib. Useful when 32-bit OmniRig is installed
+  #      on 64-bit Windows (64-bit dumpcpp can't see WOW6432Node).
+  #   2. -DWKJTX_USE_PREBUILT_OMNIRIG=ON → skip dumpcpp entirely, use the
+  #      pre-generated OmniRig.cpp/OmniRig.h shipped under
+  #      third-party/omnirig-prebuilt/. Used by CI (no OmniRig install)
+  #      and lets anyone build WKjTX without needing OmniRig locally.
+  option (WKJTX_USE_PREBUILT_OMNIRIG "Use the pre-generated OmniRig.cpp/.h shipped in third-party/omnirig-prebuilt/" OFF)
+  if (WKJTX_USE_PREBUILT_OMNIRIG)
+    message (STATUS "Using pre-generated OmniRig sources from third-party/omnirig-prebuilt/")
+    set (WKJTX_PREBUILT_OMNIRIG_DIR "${CMAKE_SOURCE_DIR}/third-party/omnirig-prebuilt")
+  elseif (NOT AXSERVER)
     find_program (DUMPCPP dumpcpp)
     if (DUMPCPP-NOTFOUND)
       message (FATAL_ERROR "dumpcpp tool not found")
@@ -698,13 +704,16 @@ if (WIN32)
       message (FATAL_ERROR "You need to install OmniRig on this computer, "
                "OR pass its path to cmake with "
                "-DAXSERVER=\"C:/Program Files (x86)/Afreet/OmniRig/OmniRig.exe\" "
-               "(useful when 32-bit OmniRig is installed on 64-bit Windows).")
+               "(useful when 32-bit OmniRig is installed on 64-bit Windows), "
+               "OR pass -DWKJTX_USE_PREBUILT_OMNIRIG=ON to use the shipped sources.")
     endif (NOT AXSERVER)
   else ()
     message (STATUS "Using AXSERVER supplied from command line: ${AXSERVER}")
   endif ()
-  string (REPLACE "\"" "" AXSERVER ${AXSERVER})
-  file (TO_CMAKE_PATH ${AXSERVER} AXSERVERSRCS)
+  if (NOT WKJTX_USE_PREBUILT_OMNIRIG)
+    string (REPLACE "\"" "" AXSERVER ${AXSERVER})
+    file (TO_CMAKE_PATH ${AXSERVER} AXSERVERSRCS)
+  endif ()
 endif (WIN32)
 
 
@@ -1033,8 +1042,22 @@ qt5_add_resources (wsjtx_RESOURCES_RCC
 
 # AX COM servers
 if (WIN32)
-  include (QtAxMacros)
-  wrap_ax_server (GENAXSRCS ${AXSERVERSRCS})
+  if (WKJTX_USE_PREBUILT_OMNIRIG)
+    # Copy the pre-generated sources into the build tree so downstream
+    # add_executable sees them at the same path the dumpcpp-generated
+    # ones would be, and include_directories picks up the header.
+    file (COPY "${WKJTX_PREBUILT_OMNIRIG_DIR}/OmniRig.cpp"
+               "${WKJTX_PREBUILT_OMNIRIG_DIR}/OmniRig.h"
+          DESTINATION "${CMAKE_BINARY_DIR}")
+    set (GENAXSRCS
+      "${CMAKE_BINARY_DIR}/OmniRig.cpp"
+      "${CMAKE_BINARY_DIR}/OmniRig.h")
+    # QAxContainer headers + link needed when using the generated namespace
+    find_package (Qt5 REQUIRED COMPONENTS AxContainer)
+  else ()
+    include (QtAxMacros)
+    wrap_ax_server (GENAXSRCS ${AXSERVERSRCS})
+  endif ()
 endif (WIN32)
 
 
