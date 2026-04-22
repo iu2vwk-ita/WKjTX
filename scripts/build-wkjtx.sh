@@ -191,10 +191,6 @@ cd "$WKJTX_BUILD"
 # passing the file path directly. This works around the 32-bit
 # OmniRig vs 64-bit dumpcpp bitness mismatch where the COM class is
 # registered in WOW6432Node but the 64-bit dumpcpp can't see it.
-# In incremental mode the dependency block above is skipped, so
-# OMNIRIG_EXE may never have been set — use default expansion to
-# keep `set -u` happy and re-probe the default install path.
-: "${OMNIRIG_EXE:=/c/Program Files (x86)/Afreet/OmniRig/OmniRig.exe}"
 CMAKE_EXTRA_ARGS=()
 if [ -f "$OMNIRIG_EXE" ]; then
   # Convert POSIX path to CMake-friendly forward-slash Windows path.

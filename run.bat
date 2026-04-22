@@ -26,13 +26,6 @@ REM Launch with MSYS2 MINGW64 runtime DLLs on PATH so Qt and gfortran
 REM dynamic libraries load correctly when running from cmd.
 set PATH=%MSYS2_HOME%\mingw64\bin;%PATH%
 
-REM OpenSSL 3 (MSYS2) needs openssl.cnf + CA bundle; without these Qt's
-REM QSslSocket reports "TLS initialization failed" on HTTPS URLs used by
-REM UPDATE DATA (state_data.bin, grid_data.bin, lotw-user-activity.csv).
-set OPENSSL_CONF=%MSYS2_HOME%\mingw64\etc\ssl\openssl.cnf
-set SSL_CERT_FILE=%MSYS2_HOME%\mingw64\etc\ssl\cert.pem
-set SSL_CERT_DIR=%MSYS2_HOME%\mingw64\etc\ssl\certs
-
 echo Launching %WKJTX_EXE%...
 start "" "%WKJTX_EXE%"
 exit /b 0
