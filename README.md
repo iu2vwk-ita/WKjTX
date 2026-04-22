@@ -104,8 +104,6 @@ operating modes as upstream.
 - **Hamlib updater** opens the JTDX SourceForge Hamlib directory in
   your browser — manual drop-in of `libhamlib-5.dll` with an
   automatic `_old` backup slot.
-- **Independent versioning.** Currently at **1.1.2**. The upstream
-  JTDX 2.2.x version number is no longer exposed.
 
 Planned in later releases: per-profile log routing, qrz.com upload.
 
