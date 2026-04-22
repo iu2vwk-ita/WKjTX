@@ -144,6 +144,14 @@ public:
   QString eqsl_username () const;
   QString eqsl_passwd () const;
   QString eqsl_nickname () const;
+  // WKjTX v1.2.0: qrz.com Logbook upload + per-service upload mode.
+  // qrz_upload_mode / eqsl_upload_mode return the UploadMode enum
+  // value cast to int (0 = Automatic, 1 = Manual). Declared as int
+  // to avoid pulling wkjtx/UploadDispatcher.hpp into this header.
+  bool    send_to_qrz () const;
+  QString qrz_api_key () const;
+  int     qrz_upload_mode () const;    // 0 = Auto, 1 = Manual
+  int     eqsl_upload_mode () const;   // 0 = Auto, 1 = Manual
   bool usesched() const;
   QString sched_hh_1 () const;
   QString sched_mm_1 () const;

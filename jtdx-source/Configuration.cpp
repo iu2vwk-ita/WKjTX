@@ -530,6 +530,8 @@ private:
   Q_SLOT void on_eqsluser_edit_textEdited(const QString &arg1);
   Q_SLOT void on_eqslpasswd_edit_textEdited(const QString &arg1);
   Q_SLOT void on_eqslnick_edit_textEdited(const QString &arg1);
+  Q_SLOT void on_qrz_api_key_edit_textEdited(const QString &arg1);
+  Q_SLOT void on_qrz_help_button_clicked();
 
   Q_SLOT void on_pbCQmsg_clicked();
   Q_SLOT void on_pbMyCall_clicked();
@@ -762,8 +764,13 @@ private:
   bool filterUDP_;
   bool send_to_eqsl_;
   QString eqsl_username_;
-  QString eqsl_passwd_;  
+  QString eqsl_passwd_;
   QString eqsl_nickname_;
+  // v1.2.0: qrz.com Logbook upload + per-service mode.
+  bool    send_to_qrz_;
+  QString qrz_api_key_;
+  int     qrz_upload_mode_;   // 0 = Auto, 1 = Manual
+  int     eqsl_upload_mode_;  // 0 = Auto, 1 = Manual
   bool usesched_;
   QString sched_hh_1_;
   QString sched_mm_1_;
@@ -1033,6 +1040,10 @@ bool Configuration::send_to_eqsl () const {return m_->send_to_eqsl_;}
 QString Configuration::eqsl_username () const {return m_->eqsl_username_;}
 QString Configuration::eqsl_passwd () const {return m_->eqsl_passwd_;}
 QString Configuration::eqsl_nickname () const {return m_->eqsl_nickname_;}
+bool    Configuration::send_to_qrz ()      const {return m_->send_to_qrz_;}
+QString Configuration::qrz_api_key ()      const {return m_->qrz_api_key_;}
+int     Configuration::qrz_upload_mode ()  const {return m_->qrz_upload_mode_;}
+int     Configuration::eqsl_upload_mode () const {return m_->eqsl_upload_mode_;}
 bool Configuration::usesched () const {return m_->usesched_;}
 QString Configuration::sched_hh_1 () const {return m_->sched_hh_1_;}
 QString Configuration::sched_mm_1 () const {return m_->sched_mm_1_;}
@@ -2135,6 +2146,12 @@ Radio::convert_dark("#fafbfe",useDarkStyle_),Radio::convert_dark("#dcdef1",useDa
     ui_->eqsl_check_box->setEnabled (true);
     ui_->eqsl_check_box->setChecked (send_to_eqsl_);
   }
+  // v1.2.0: push qrz.com + per-service mode state into the new widgets.
+  ui_->qrz_api_key_edit->setText (qrz_api_key_);
+  ui_->qrz_check_box->setEnabled (!qrz_api_key_.isEmpty ());
+  ui_->qrz_check_box->setChecked (send_to_qrz_ && !qrz_api_key_.isEmpty ());
+  ui_->qrz_mode_combo->setCurrentIndex  (qrz_upload_mode_  == 1 ? 1 : 0);
+  ui_->eqsl_mode_combo->setCurrentIndex (eqsl_upload_mode_ == 1 ? 1 : 0);
   next_frequencies_.frequency_list (frequencies_.frequency_list ());
   ui_->UseSched_check_box->setChecked (usesched_);
   ui_->hhComboBox_1->setCurrentText (sched_hh_1_);
@@ -2568,6 +2585,11 @@ void Configuration::impl::read_settings ()
   eqsl_passwd_ = settings_->value ("EQSLPasswd", "").toString ();
   eqsl_nickname_ = settings_->value ("EQSLNick", "").toString ();
   send_to_eqsl_ = settings_->value ("EQSLSend", false).toBool ();
+  // v1.2.0: qrz.com Logbook + per-service upload mode.
+  send_to_qrz_      = settings_->value ("QRZSend",      false).toBool ();
+  qrz_api_key_      = settings_->value ("QRZApiKey",    "").toString ();
+  qrz_upload_mode_  = settings_->value ("QRZUploadMode",  0).toInt ();
+  eqsl_upload_mode_ = settings_->value ("EQSLUploadMode", 0).toInt ();
   if(eqsl_username_.isEmpty () || eqsl_passwd_.isEmpty () || eqsl_nickname_.isEmpty ()) {
     ui_->eqsl_check_box->setChecked (false); ui_->eqsl_check_box->setEnabled (false); send_to_eqsl_=false; 
   }
@@ -2915,6 +2937,11 @@ void Configuration::impl::write_settings ()
   settings_->setValue ("EQSLUser", eqsl_username_);
   settings_->setValue ("EQSLPasswd", eqsl_passwd_);
   settings_->setValue ("EQSLNick", eqsl_nickname_);
+  // v1.2.0: qrz.com Logbook + per-service upload mode.
+  settings_->setValue ("QRZSend",        send_to_qrz_);
+  settings_->setValue ("QRZApiKey",      qrz_api_key_);
+  settings_->setValue ("QRZUploadMode",  qrz_upload_mode_);
+  settings_->setValue ("EQSLUploadMode", eqsl_upload_mode_);
   settings_->setValue ("UseSchedBands", usesched_);
   settings_->setValue ("Sched_hh_1", sched_hh_1_);
   settings_->setValue ("Sched_mm_1", sched_mm_1_);
@@ -3511,6 +3538,12 @@ void Configuration::impl::accept ()
   eqsl_username_ = ui_->eqsluser_edit->text ();
   eqsl_passwd_ = ui_->eqslpasswd_edit->text ();
   eqsl_nickname_ = ui_->eqslnick_edit->text ();
+  // v1.2.0: qrz.com Logbook + upload mode selection.
+  qrz_api_key_ = ui_->qrz_api_key_edit->text ().trimmed ();
+  if (!qrz_api_key_.isEmpty ()) send_to_qrz_ = ui_->qrz_check_box->isChecked ();
+  else                          send_to_qrz_ = false;
+  qrz_upload_mode_  = ui_->qrz_mode_combo->currentIndex  () == 1 ? 1 : 0;
+  eqsl_upload_mode_ = ui_->eqsl_mode_combo->currentIndex () == 1 ? 1 : 0;
   usesched_ = ui_->UseSched_check_box->isChecked ();
   sched_hh_1_ = ui_->hhComboBox_1->currentText ();
   sched_mm_1_ = ui_->mmComboBox_1->currentText ();
@@ -3777,8 +3810,42 @@ void Configuration::impl::on_eqslpasswd_edit_textEdited(const QString &passwd)
 
 void Configuration::impl::on_eqslnick_edit_textEdited(const QString &nick)
 {
-  ui_->eqsl_check_box->setEnabled (!ui_->eqsluser_edit->text ().isEmpty () && !ui_->eqslpasswd_edit->text ().isEmpty () && !nick.isEmpty ());  
-  ui_->eqsl_check_box->setChecked ((!ui_->eqsluser_edit->text ().isEmpty () && !ui_->eqslpasswd_edit->text ().isEmpty () && !nick.isEmpty ()) && send_to_eqsl_);  
+  ui_->eqsl_check_box->setEnabled (!ui_->eqsluser_edit->text ().isEmpty () && !ui_->eqslpasswd_edit->text ().isEmpty () && !nick.isEmpty ());
+  ui_->eqsl_check_box->setChecked ((!ui_->eqsluser_edit->text ().isEmpty () && !ui_->eqslpasswd_edit->text ().isEmpty () && !nick.isEmpty ()) && send_to_eqsl_);
+}
+
+// v1.2.0: qrz.com — gate the Enable checkbox on a non-empty API key.
+void Configuration::impl::on_qrz_api_key_edit_textEdited(const QString & key)
+{
+  bool const hasKey = !key.trimmed ().isEmpty ();
+  ui_->qrz_check_box->setEnabled (hasKey);
+  if (!hasKey) ui_->qrz_check_box->setChecked (false);
+}
+
+// v1.2.0: qrz.com — "?" help button → step-by-step instructions.
+void Configuration::impl::on_qrz_help_button_clicked ()
+{
+  JTDXMessageBox mb;
+  mb.setIcon (QMessageBox::Information);
+  mb.setWindowTitle (tr ("qrz.com Logbook API key"));
+  mb.setText (tr ("How to obtain your qrz.com Logbook API key:\n"
+                  "\n"
+                  "1. Log in at https://www.qrz.com\n"
+                  "2. Go to \"My Account\" (top-right menu)\n"
+                  "3. Open \"Logbook\" and then \"Settings\"\n"
+                  "4. Under \"API\" click \"Generate / Show API Key\"\n"
+                  "5. Copy the key (format: AAAA-BBBB-CCCC-DDDD) and\n"
+                  "   paste it into the API Key field here.\n"
+                  "\n"
+                  "The API key is tied to the qrz.com account that owns\n"
+                  "the logbook. A paid subscription is NOT required to\n"
+                  "upload your own QSOs. No username or password is used\n"
+                  "by this upload path — only the API key.\n"
+                  "\n"
+                  "The key is stored in your WKjTX.ini (plaintext, same\n"
+                  "location as the eQSL password). Do not share this file."));
+  mb.translate_buttons ();
+  mb.exec ();
 }
 
 void Configuration::impl::on_font_push_button_clicked ()

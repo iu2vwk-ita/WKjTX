@@ -3143,6 +3143,146 @@ for assessing propagation and system performance.</string>
           </widget>
          </item>
          <item>
+          <widget class="QGroupBox" name="qrz_group_box">
+           <property name="toolTip">
+            <string>qrz.com Logbook API upload. WKjTX can push each QSO to your qrz.com Logbook automatically or queue it for manual upload. An API key is required; generate one at qrz.com - My Account - Logbook API.</string>
+           </property>
+           <property name="title">
+            <string>qrz.com Logbook</string>
+           </property>
+           <layout class="QGridLayout" name="gridLayout_qrz">
+            <property name="leftMargin">
+             <number>5</number>
+            </property>
+            <property name="topMargin">
+             <number>2</number>
+            </property>
+            <property name="rightMargin">
+             <number>2</number>
+            </property>
+            <property name="bottomMargin">
+             <number>2</number>
+            </property>
+            <property name="spacing">
+             <number>4</number>
+            </property>
+            <item row="0" column="0">
+             <widget class="QCheckBox" name="qrz_check_box">
+              <property name="toolTip">
+               <string>Enable automatic upload of every logged QSO to qrz.com Logbook.</string>
+              </property>
+              <property name="text">
+               <string>Enable &amp;qrz.com Logbook upload</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1" colspan="2">
+             <spacer name="horizontalSpacer_qrz">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item row="1" column="0">
+             <widget class="QLabel" name="qrz_api_key_label">
+              <property name="text">
+               <string>API &amp;Key:</string>
+              </property>
+              <property name="buddy">
+               <cstring>qrz_api_key_edit</cstring>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1">
+             <widget class="QLineEdit" name="qrz_api_key_edit">
+              <property name="toolTip">
+               <string>qrz.com Logbook API key. Generate it at qrz.com - My Account - Logbook API.</string>
+              </property>
+              <property name="echoMode">
+               <enum>QLineEdit::Password</enum>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="2">
+             <widget class="QPushButton" name="qrz_help_button">
+              <property name="toolTip">
+               <string>How to obtain a qrz.com Logbook API key</string>
+              </property>
+              <property name="text">
+               <string>?</string>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>30</width>
+                <height>16777215</height>
+               </size>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="0">
+             <widget class="QLabel" name="qrz_mode_label">
+              <property name="text">
+               <string>&amp;Upload mode:</string>
+              </property>
+              <property name="buddy">
+               <cstring>qrz_mode_combo</cstring>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="1" colspan="2">
+             <widget class="QComboBox" name="qrz_mode_combo">
+              <property name="toolTip">
+               <string>Automatic: upload each QSO immediately. Manual: queue every QSO for later upload via File - Upload pending QSOs.</string>
+              </property>
+              <item>
+               <property name="text">
+                <string>Automatic (upload each QSO)</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Manual (queue only)</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+            <item row="3" column="0">
+             <widget class="QLabel" name="eqsl_mode_label">
+              <property name="text">
+               <string>eQSL mode:</string>
+              </property>
+              <property name="buddy">
+               <cstring>eqsl_mode_combo</cstring>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="1" colspan="2">
+             <widget class="QComboBox" name="eqsl_mode_combo">
+              <property name="toolTip">
+               <string>Applies to the Enable eQSL sending box above. Automatic: upload each QSO immediately. Manual: queue every QSO for later upload.</string>
+              </property>
+              <item>
+               <property name="text">
+                <string>Automatic (upload each QSO)</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Manual (queue only)</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
           <widget class="QGroupBox" name="groupBox_4">
            <property name="toolTip">
             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Primary UDP connection to external software.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>

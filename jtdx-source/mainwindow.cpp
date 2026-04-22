@@ -66,6 +66,10 @@
 #include "wkjtx/RadioProfileDialog.hpp"
 #include "wkjtx/TimeSync.hpp"
 #include "wkjtx/TimeSyncBadge.hpp"
+#include "wkjtx/QrzUploader.hpp"
+#include "wkjtx/UploadQueue.hpp"
+#include "wkjtx/UploadDispatcher.hpp"
+#include "wkjtx/PendingUploadsDialog.hpp"
 #include <QDir>
 #include <QFileInfo>
 #include "wkjtx/detectors/NewDxccDetector.hpp"
@@ -473,6 +477,33 @@ MainWindow::MainWindow(bool multiple, QSettings * settings, QSharedMemory *shdme
   createAutoCallMenu ();     // WKjTX: "Auto-call..." in File menu + instantiate engine
   createAutoCallBadge ();    // WKjTX: flashing badge in status bar
   createProfileButtons ();   // WKjTX: 3-slot profile quick-switch in menubar corner
+  // v1.2.0: qrz.com upload + unified upload queue with auto/manual mode.
+  {
+    QString const queuePath =
+        QStandardPaths::writableLocation (QStandardPaths::AppLocalDataLocation)
+        + "/upload_queue.json";
+    m_uploadQueue    = new wkjtx::UploadQueue {queuePath, this};
+    m_qrz            = new wkjtx::QrzUploader {this};
+    m_uploadDispatch = new wkjtx::UploadDispatcher {&m_config, m_uploadQueue,
+                                                    m_qrz, Eqsl, this};
+    connect (m_uploadDispatch, &wkjtx::UploadDispatcher::serviceSucceeded,
+             this, [this] (wkjtx::UploadService s, QString call) {
+                 QString const svc = (s == wkjtx::UploadService::Qrz
+                                        ? QStringLiteral ("QRZ")
+                                        : QStringLiteral ("eQSL"));
+                 writeToALLTXT (svc + ": uploaded " + call);
+                 statusBar ()->showMessage (svc + tr (": uploaded ") + call, 5000);
+             });
+    connect (m_uploadDispatch, &wkjtx::UploadDispatcher::serviceFailed,
+             this, [this] (wkjtx::UploadService s, QString call, QString err) {
+                 QString const svc = (s == wkjtx::UploadService::Qrz
+                                        ? QStringLiteral ("QRZ")
+                                        : QStringLiteral ("eQSL"));
+                 writeToALLTXT (svc + ": FAIL " + call + " - " + err);
+                 statusBar ()->showMessage (svc + tr (": fail ") + call
+                                             + QStringLiteral (" - ") + err, 8000);
+             });
+  }
   m_config.set_jtdxtime (m_jtdxtime);
   ui->decodedTextBrowser->setConfiguration (&m_config);
   ui->decodedTextBrowser2->setConfiguration (&m_config);
@@ -2245,6 +2276,14 @@ void MainWindow::monitor (bool state)
 
 void MainWindow::on_actionAbout_triggered() { CAboutDlg {this}.exec (); } //Display "About"
 
+// v1.2.0: File → Upload pending QSOs... → open the queue dialog.
+void MainWindow::on_actionUpload_pending_triggered()
+{
+  if (!m_uploadDispatch || !m_uploadQueue) return;
+  wkjtx::PendingUploadsDialog dlg {m_uploadQueue, m_uploadDispatch, this};
+  dlg.exec ();
+}
+
 void MainWindow::on_enableTxButton_clicked (bool checked)
 {
   if(m_enableTx && !checked && m_curMsgTx.startsWith(m_hisCall+" ")) m_lasthint=true;
@@ -2758,6 +2797,36 @@ void MainWindow::subProcessError (QProcess * process, QProcess::ProcessError)
 void MainWindow::closeEvent(QCloseEvent * e)
 {
   m_valid = false;              // suppresses subprocess errors
+  // v1.2.0: if qrz.com / eQSL uploads are queued, offer to flush them
+  // before the app exits. "Later" leaves the queue on disk for the
+  // next run; "Discard" wipes it. Blocks up to 30 s while flushing.
+  if (m_uploadDispatch && m_uploadDispatch->pendingCount () > 0) {
+      int const n = m_uploadDispatch->pendingCount ();
+      auto const choice = QMessageBox::question (
+          this,
+          tr ("Pending QSO uploads"),
+          tr ("%n QSO are queued for qrz.com / eQSL upload.\n"
+              "Upload them before closing?", "", n),
+          QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel,
+          QMessageBox::Yes);
+      if (choice == QMessageBox::Yes) {
+          QEventLoop loop;
+          QTimer::singleShot (30000, &loop, &QEventLoop::quit);
+          connect (m_uploadDispatch, &wkjtx::UploadDispatcher::allFlushed,
+                   &loop, &QEventLoop::quit);
+          m_uploadDispatch->flushPending ();
+          loop.exec ();
+      } else if (choice == QMessageBox::Cancel) {
+          if (QMessageBox::question (this,
+                  tr ("Discard queued uploads"),
+                  tr ("Permanently discard the %n queued QSO upload(s)?", "", n),
+                  QMessageBox::Yes | QMessageBox::No,
+                  QMessageBox::No) == QMessageBox::Yes) {
+              m_uploadDispatch->clearPending ();
+          }
+      }
+      // QMessageBox::No → leave queue intact on disk for next run.
+  }
   if(m_config.clear_DX_exit())
     {
       clearDX ("");
@@ -6449,8 +6518,24 @@ void MainWindow::acceptQSO2(QDateTime const& QSO_date_off, QString const& call, 
     if(-1 == sock.writeDatagram (myadif2, QHostAddress {m_config.udp2_server_name()}, m_config.udp2_server_port()))
       { JTDXMessageBox::warning_message (this, "", tr ("Error sending QSO ADIF data to secondary UDP server"), tr ("Write returned \"%1\"").arg (sock.errorString ())); }
   }
-  if (m_config.send_to_eqsl())
-      Eqsl->upload(m_config.eqsl_username(),m_config.eqsl_passwd(),m_config.eqsl_nickname(),call,mode,QSO_date_on,rpt_sent,m_config.bands ()->find (dial_freq),eqslcomments);
+  // v1.2.0: route uploads (qrz.com + eQSL) through the UploadDispatcher
+  // so the Auto / Manual mode toggle and the retry queue take effect.
+  // The dispatcher checks Configuration flags internally and enqueues
+  // the entry regardless of the chosen mode, so manual uploads still
+  // end up in the persistent queue for review later.
+  if (m_uploadDispatch) {
+      m_uploadDispatch->onQsoAccepted (QString::fromUtf8 (myadif2),
+                                       call,
+                                       m_config.bands ()->find (dial_freq),
+                                       mode,
+                                       QSO_date_on);
+  } else if (m_config.send_to_eqsl ()) {
+      // Fallback — should not trigger in normal operation.
+      Eqsl->upload (m_config.eqsl_username (), m_config.eqsl_passwd (),
+                    m_config.eqsl_nickname (), call, mode, QSO_date_on,
+                    rpt_sent, m_config.bands ()->find (dial_freq),
+                    eqslcomments);
+  }
   ui->dxCallEntry->setStyleSheet(QString("QLineEdit {color: %1; background: %2}").arg(Radio::convert_dark("#000000",m_useDarkStyle),Radio::convert_dark("#7fff7f",m_useDarkStyle)));
   m_lastloggedcall=call;
   m_lastloggedtime=m_jtdxtime->currentDateTimeUtc2();

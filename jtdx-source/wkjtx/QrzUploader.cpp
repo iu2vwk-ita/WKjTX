@@ -100,7 +100,13 @@ void QrzUploader::uploadAdif (QString const & adifRecord)
     }
     QString const body = QString::fromUtf8 (reply->readAll ()).trimmed ();
     QString const result = parseResult (body);
-    if (result.compare (QLatin1String ("OK"), Qt::CaseInsensitive) == 0) {
+    // REPLACE means the QSO matched a record already in the logbook and
+    // was overwritten — from the operator's standpoint it's a
+    // successful upload, not a failure.
+    bool const ok =
+        result.compare (QLatin1String ("OK"),      Qt::CaseInsensitive) == 0
+     || result.compare (QLatin1String ("REPLACE"), Qt::CaseInsensitive) == 0;
+    if (ok) {
       emit uploaded (call);
     } else {
       QString reason = parseReason (body);

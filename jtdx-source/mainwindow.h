@@ -75,6 +75,12 @@ class QTime;
 class WSPRBandHopping;
 class HelpTextWindow;
 class EQSL;
+namespace wkjtx {
+  class QrzUploader;
+  class UploadQueue;
+  class UploadDispatcher;
+  class PendingUploadsDialog;
+}
 class WSPRNet;
 class SoundOutput;
 class Modulator;
@@ -169,6 +175,8 @@ private slots:
 //  void on_actionLocal_User_Guide_triggered();
   void on_actionWide_Waterfall_triggered();
   void on_actionOpen_triggered();
+  // v1.2.0: open the pending-uploads dialog (qrz.com / eQSL queue).
+  void on_actionUpload_pending_triggered();
   void on_actionOpen_next_in_directory_triggered();
   void on_actionDecode_remaining_files_in_directory_triggered();
   void on_actionDelete_all_wav_files_in_SaveDir_triggered();
@@ -693,6 +701,10 @@ private:
 
   WSPRNet *wsprNet;
   EQSL *Eqsl;
+  // v1.2.0: qrz.com + unified upload queue with auto/manual modes.
+  wkjtx::QrzUploader      * m_qrz            {nullptr};
+  wkjtx::UploadQueue      * m_uploadQueue    {nullptr};
+  wkjtx::UploadDispatcher * m_uploadDispatch {nullptr};
 
   QTimer m_guiTimer;
   QTimer ptt1Timer;                 //StartTx delay

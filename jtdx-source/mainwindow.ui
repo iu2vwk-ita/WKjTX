@@ -4619,6 +4619,8 @@ list. The list can be maintained in Settings (F2).</string>
     <addaction name="actionOpen_wsjtx_log_adi"/>
     <addaction name="actionOpen_log_directory"/>
     <addaction name="separator"/>
+    <addaction name="actionUpload_pending"/>
+    <addaction name="separator"/>
     <addaction name="actionSettings"/>
     <addaction name="separator"/>
     <addaction name="actionExit"/>
@@ -5318,6 +5320,14 @@ list. The list can be maintained in Settings (F2).</string>
    </property>
    <property name="shortcut">
     <string>F2</string>
+   </property>
+  </action>
+  <action name="actionUpload_pending">
+   <property name="text">
+    <string>Upload pending QSOs...</string>
+   </property>
+   <property name="toolTip">
+    <string>Review queued qrz.com / eQSL uploads and retry or remove them.</string>
    </property>
   </action>
   <action name="actionJTDX_Forum">
