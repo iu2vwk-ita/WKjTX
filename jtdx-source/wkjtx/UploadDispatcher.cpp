@@ -2,7 +2,7 @@
 
 #include <QTimer>
 
-#include "Configuration.hpp"
+#include "../Configuration.hpp"
 #include "QrzUploader.hpp"
 #include "../eqsl.h"
 
