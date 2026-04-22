@@ -4620,6 +4620,7 @@ list. The list can be maintained in Settings (F2).</string>
     <addaction name="actionOpen_log_directory"/>
     <addaction name="separator"/>
     <addaction name="actionUpload_pending"/>
+    <addaction name="actionDownload_qrz"/>
     <addaction name="separator"/>
     <addaction name="actionSettings"/>
     <addaction name="separator"/>
@@ -5330,6 +5331,14 @@ list. The list can be maintained in Settings (F2).</string>
    </property>
    <property name="toolTip">
     <string>Review queued qrz.com / eQSL uploads and retry or remove them.</string>
+   </property>
+  </action>
+  <action name="actionDownload_qrz">
+   <property name="text">
+    <string>Download log from qrz.com...</string>
+   </property>
+   <property name="toolTip">
+    <string>Pull new QSOs from qrz.com Logbook into the internal log (incremental since last fetch; skips duplicates on CALL + QSO_DATE + BAND + MODE).</string>
    </property>
   </action>
   <action name="actionAutoCQ_after_QSO">

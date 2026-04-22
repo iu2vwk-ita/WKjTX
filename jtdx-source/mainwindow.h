@@ -77,6 +77,7 @@ class HelpTextWindow;
 class EQSL;
 namespace wkjtx {
   class QrzUploader;
+  class QrzDownloader;
   class UploadQueue;
   class UploadDispatcher;
   class PendingUploadsDialog;
@@ -177,6 +178,8 @@ private slots:
   void on_actionOpen_triggered();
   // v1.2.0: open the pending-uploads dialog (qrz.com / eQSL queue).
   void on_actionUpload_pending_triggered();
+  // v1.2.0: FETCH log from qrz.com into local log (incremental).
+  void on_actionDownload_qrz_triggered();
   // v1.2.0: user toggle — after every logged QSO, re-arm Tx6 and
   // enable TX so the station starts calling CQ again without manual
   // intervention. Clicking "Halt TX" (or any code path that calls
@@ -709,6 +712,7 @@ private:
   EQSL *Eqsl;
   // v1.2.0: qrz.com + unified upload queue with auto/manual modes.
   wkjtx::QrzUploader      * m_qrz            {nullptr};
+  wkjtx::QrzDownloader    * m_qrzDownloader  {nullptr};
   wkjtx::UploadQueue      * m_uploadQueue    {nullptr};
   wkjtx::UploadDispatcher * m_uploadDispatch {nullptr};
   // v1.2.0: state for the "Auto-CQ after QSO" user toggle.

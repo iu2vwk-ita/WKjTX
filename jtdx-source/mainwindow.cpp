@@ -3,6 +3,7 @@
 #include "mainwindow.h"
 #include <cinttypes>
 #include <limits>
+#include <memory>
 #include <fftw3.h>
 #include <thread>
 
@@ -67,9 +68,11 @@
 #include "wkjtx/TimeSync.hpp"
 #include "wkjtx/TimeSyncBadge.hpp"
 #include "wkjtx/QrzUploader.hpp"
+#include "wkjtx/QrzDownloader.hpp"
 #include "wkjtx/UploadQueue.hpp"
 #include "wkjtx/UploadDispatcher.hpp"
 #include "wkjtx/PendingUploadsDialog.hpp"
+#include "wkjtx/AdifImporter.hpp"
 #include <QDir>
 #include <QFileInfo>
 #include "wkjtx/detectors/NewDxccDetector.hpp"
@@ -484,6 +487,7 @@ MainWindow::MainWindow(bool multiple, QSettings * settings, QSharedMemory *shdme
         + "/upload_queue.json";
     m_uploadQueue    = new wkjtx::UploadQueue {queuePath, this};
     m_qrz            = new wkjtx::QrzUploader {this};
+    m_qrzDownloader  = new wkjtx::QrzDownloader {this};
     m_uploadDispatch = new wkjtx::UploadDispatcher {&m_config, m_uploadQueue,
                                                     m_qrz, Eqsl, this};
     connect (m_uploadDispatch, &wkjtx::UploadDispatcher::serviceSucceeded,
@@ -2287,6 +2291,98 @@ void MainWindow::on_actionUpload_pending_triggered()
   if (!m_uploadDispatch || !m_uploadQueue) return;
   wkjtx::PendingUploadsDialog dlg {m_uploadQueue, m_uploadDispatch, this};
   dlg.exec ();
+}
+
+// v1.2.0: File → Download log from qrz.com... → pull new QSOs.
+void MainWindow::on_actionDownload_qrz_triggered()
+{
+  if (!m_qrzDownloader) return;
+  QString const apiKey = m_config.qrz_api_key ();
+  if (apiKey.isEmpty ()) {
+    JTDXMessageBox::warning_message (this, "",
+        tr ("qrz.com API key not set. Open Settings -> Reporting "
+            "-> qrz.com Logbook to enter it."));
+    return;
+  }
+
+  QDateTime const since = m_config.qrz_last_fetch ();
+  QString const sinceMsg = since.isValid ()
+      ? since.toUTC ().toString (Qt::ISODate)
+      : tr ("beginning of logbook (first sync)");
+  statusBar ()->showMessage (tr ("qrz.com: fetching QSOs since %1...")
+                                  .arg (sinceMsg), 0);
+
+  // The QrzDownloader lives for the whole app, so use single-shot
+  // connects gated on an id to avoid routing the reply to a prior
+  // click. Simplest approach: blockingly connect once per click and
+  // disconnect in the handler.
+  auto * self = this;
+  auto okConn   = std::make_shared<QMetaObject::Connection> ();
+  auto failConn = std::make_shared<QMetaObject::Connection> ();
+
+  *okConn = connect (m_qrzDownloader, &wkjtx::QrzDownloader::downloaded,
+                     this,
+                     [self, okConn, failConn] (QByteArray adif, int count) {
+      self->disconnect (*okConn);
+      self->disconnect (*failConn);
+      if (adif.isEmpty () || count == 0) {
+          self->statusBar ()->showMessage (
+              tr ("qrz.com: no new QSOs since last fetch."), 5000);
+          self->writeToALLTXT ("QRZ FETCH: 0 records");
+          self->m_config.set_qrz_last_fetch (
+              QDateTime::currentDateTimeUtc ());
+          return;
+      }
+
+      QString const dest =
+          self->m_dataDir.absoluteFilePath (QStringLiteral ("wsjtx_log.adi"));
+      QString const src  =
+          self->m_dataDir.absoluteFilePath (QStringLiteral ("qrz_fetch.adi"));
+
+      {
+          QFile tmp {src};
+          if (!tmp.open (QIODevice::WriteOnly | QIODevice::Truncate)) {
+              JTDXMessageBox::critical_message (self, "",
+                  tr ("qrz.com: cannot write temp file:\n%1")
+                      .arg (tmp.errorString ()));
+              return;
+          }
+          tmp.write (adif);
+          tmp.close ();
+      }
+
+      AdifImporter::Stats const st = AdifImporter::run (src, dest);
+      QFile::remove (src);
+      if (!st.ok) {
+          JTDXMessageBox::critical_message (self, "",
+              tr ("qrz.com: ADIF import failed:\n%1").arg (st.errorMessage));
+          return;
+      }
+      QString const msg = tr ("qrz.com FETCH: %1 received, "
+                              "%2 imported, %3 duplicates, %4 malformed")
+                            .arg (st.totalRead).arg (st.imported)
+                            .arg (st.duplicates).arg (st.malformed);
+      JTDXMessageBox::information_message (self, "",
+          tr ("qrz.com download complete."), msg);
+      self->writeToALLTXT ("QRZ FETCH: " + msg);
+      self->statusBar ()->showMessage (msg, 8000);
+      self->m_config.set_qrz_last_fetch (QDateTime::currentDateTimeUtc ());
+  });
+
+  *failConn = connect (m_qrzDownloader, &wkjtx::QrzDownloader::downloadFailed,
+                       this,
+                       [self, okConn, failConn] (QString error) {
+      self->disconnect (*okConn);
+      self->disconnect (*failConn);
+      JTDXMessageBox::critical_message (self, "",
+          tr ("qrz.com download failed:\n%1").arg (error));
+      self->writeToALLTXT ("QRZ FETCH failed: " + error);
+      self->statusBar ()->showMessage (
+          tr ("qrz.com download failed: %1").arg (error), 8000);
+  });
+
+  m_qrzDownloader->setApiKey (apiKey);
+  m_qrzDownloader->fetch (since);
 }
 
 // v1.2.0: AutoSeq menu toggle — persist + take effect on next QSO.

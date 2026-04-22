@@ -771,6 +771,7 @@ private:
   QString qrz_api_key_;
   int     qrz_upload_mode_;   // 0 = Auto, 1 = Manual
   int     eqsl_upload_mode_;  // 0 = Auto, 1 = Manual
+  QDateTime qrz_last_fetch_;
   bool usesched_;
   QString sched_hh_1_;
   QString sched_mm_1_;
@@ -1044,6 +1045,13 @@ bool    Configuration::send_to_qrz ()      const {return m_->send_to_qrz_;}
 QString Configuration::qrz_api_key ()      const {return m_->qrz_api_key_;}
 int     Configuration::qrz_upload_mode ()  const {return m_->qrz_upload_mode_;}
 int     Configuration::eqsl_upload_mode () const {return m_->eqsl_upload_mode_;}
+QDateTime Configuration::qrz_last_fetch () const {return m_->qrz_last_fetch_;}
+void Configuration::set_qrz_last_fetch (QDateTime const & v)
+{
+  m_->qrz_last_fetch_ = v;
+  m_->settings_->setValue ("QRZLastFetch",
+      v.isValid () ? v.toUTC ().toString (Qt::ISODate) : QString {});
+}
 bool Configuration::usesched () const {return m_->usesched_;}
 QString Configuration::sched_hh_1 () const {return m_->sched_hh_1_;}
 QString Configuration::sched_mm_1 () const {return m_->sched_mm_1_;}
@@ -2590,6 +2598,11 @@ void Configuration::impl::read_settings ()
   qrz_api_key_      = settings_->value ("QRZApiKey",    "").toString ();
   qrz_upload_mode_  = settings_->value ("QRZUploadMode",  0).toInt ();
   eqsl_upload_mode_ = settings_->value ("EQSLUploadMode", 0).toInt ();
+  {
+    QString const ts = settings_->value ("QRZLastFetch", "").toString ();
+    qrz_last_fetch_ = ts.isEmpty () ? QDateTime {}
+                                    : QDateTime::fromString (ts, Qt::ISODate);
+  }
   if(eqsl_username_.isEmpty () || eqsl_passwd_.isEmpty () || eqsl_nickname_.isEmpty ()) {
     ui_->eqsl_check_box->setChecked (false); ui_->eqsl_check_box->setEnabled (false); send_to_eqsl_=false; 
   }

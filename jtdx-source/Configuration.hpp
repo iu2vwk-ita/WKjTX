@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QFont>
+#include <QDateTime>
 
 #include "Radio.hpp"
 #include "IARURegions.hpp"
@@ -152,6 +153,11 @@ public:
   QString qrz_api_key () const;
   int     qrz_upload_mode () const;    // 0 = Auto, 1 = Manual
   int     eqsl_upload_mode () const;   // 0 = Auto, 1 = Manual
+  // v1.2.0: last QRZ FETCH timestamp for incremental download.
+  // Returns an invalid QDateTime on first run so the caller falls back
+  // to a full pull.
+  QDateTime qrz_last_fetch () const;
+  void      set_qrz_last_fetch (QDateTime const &);
   bool usesched() const;
   QString sched_hh_1 () const;
   QString sched_mm_1 () const;
