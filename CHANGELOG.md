@@ -8,6 +8,38 @@ upstream JTDX version is preserved in internal Versions.cmake
 for code compatibility, but public releases are tagged
 `v0.1.0` → `v1.0.0` reflecting WKjTX's own delivery phases.
 
+## [v1.1.2] — 2026-04-22 — NTP clock-offset badge + one-click system resync
+
+### Added
+
+- **NTP time-sync badge** in the top-right menubar corner (next to the
+  three radio profile buttons). Shows the live offset of the system
+  clock against `pool.ntp.org`:
+  - green when the drift is under 100 ms,
+  - amber when between 100 ms and 500 ms,
+  - red when 500 ms or more, or when NTP is unreachable.
+- **One-click resync.** Clicking the badge triggers an elevated
+  PowerShell `Set-Date` call that steps the system clock directly by
+  the measured SNTP offset. The UAC prompt appears once per click.
+  The clock is corrected even if Windows Time service (`w32tm`) is
+  disabled or misconfigured — `Set-Date` goes straight to the Win32
+  `SetSystemTime` API.
+- **Auto-refresh** every 5 minutes (silent, no UAC, no admin) keeps
+  the offset value up to date on the badge. A short re-query also
+  fires 1.5 s after a manual resync so the badge immediately reflects
+  the new clock state.
+- **No-op guard**: if the last measured offset is within ±10 ms the
+  badge no-ops on click instead of spawning a UAC prompt for a
+  trivial delta.
+- **Optional auto-sync every 10 minutes.** Right-click the badge →
+  *Auto-sync system clock every 10 minutes (install, UAC)*. One
+  elevated PowerShell call reconfigures Windows Time Service to
+  poll `pool.ntp.org` every 600 s and restarts `w32time`. From then
+  on the system clock stays aligned silently as SYSTEM — **no more
+  UAC prompts** per sync. A second context-menu entry (*Restore
+  Windows default sync*) reverts to `time.windows.com` with the
+  stock 1-week interval.
+
 ## [v1.1.1] — 2026-04-22 — Theme quick-toggle, tab fix, date-filtered ADIF export
 
 ### Added

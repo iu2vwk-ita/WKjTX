@@ -51,6 +51,10 @@ set (WKJTX_SOURCES
   AdifExporter.hpp
   AdifExportDialog.cpp
   AdifExportDialog.hpp
+  TimeSync.cpp
+  TimeSync.hpp
+  TimeSyncBadge.cpp
+  TimeSyncBadge.hpp
   detectors/Maidenhead.cpp
   detectors/Maidenhead.hpp
   detectors/ZoneTables.hpp

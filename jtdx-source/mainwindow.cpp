@@ -64,6 +64,8 @@
 #include "wkjtx/ProfileManager.hpp"
 #include "wkjtx/ProfileButton.hpp"
 #include "wkjtx/RadioProfileDialog.hpp"
+#include "wkjtx/TimeSync.hpp"
+#include "wkjtx/TimeSyncBadge.hpp"
 #include <QDir>
 #include <QFileInfo>
 #include "wkjtx/detectors/NewDxccDetector.hpp"
@@ -2980,6 +2982,56 @@ void MainWindow::createProfileButtons ()
     connect (btn, &wkjtx::ProfileButton::hideRequested,      this, &MainWindow::hideProfile);
     connect (btn, &wkjtx::ProfileButton::clearRequested,     this, &MainWindow::clearProfile);
   }
+
+  // WKjTX NTP clock-sync badge — same corner, right of radio profiles.
+  m_timeSyncBadge = new wkjtx::TimeSyncBadge (corner);
+  hbox->addWidget (m_timeSyncBadge);
+
+  m_timeSync = new wkjtx::TimeSyncManager (this);
+  connect (m_timeSync, &wkjtx::TimeSyncManager::offsetUpdated,
+           this, [this] (qint64 offsetMs, bool ok, QString const& err) {
+             m_timeSyncBadge->setOffsetMs (offsetMs, ok, err);
+           });
+  connect (m_timeSyncBadge, &wkjtx::TimeSyncBadge::enableAutoSyncRequested,
+           this, [this] {
+             wkjtx::TimeSyncManager::enableAutoSync10Min ();
+             // Windows Time service takes a few seconds to restart and
+             // issue the first resync; refresh the badge twice so the
+             // user sees the new offset quickly.
+             QTimer::singleShot (3000,  m_timeSync, &wkjtx::TimeSyncManager::queryNow);
+             QTimer::singleShot (15000, m_timeSync, &wkjtx::TimeSyncManager::queryNow);
+           });
+  connect (m_timeSyncBadge, &wkjtx::TimeSyncBadge::disableAutoSyncRequested,
+           this, [this] {
+             wkjtx::TimeSyncManager::restoreDefaultSync ();
+             QTimer::singleShot (3000, m_timeSync, &wkjtx::TimeSyncManager::queryNow);
+           });
+
+  connect (m_timeSyncBadge, &wkjtx::TimeSyncBadge::syncRequested,
+           this, [this] {
+             // Require a fresh valid NTP offset before launching the
+             // elevated step. If the last query failed or we never got
+             // one, re-query and bail so the user sees the UAC prompt
+             // only when we actually have something to apply.
+             if (!m_timeSync->lastOk ()) {
+               m_timeSync->queryNow ();
+               return;
+             }
+             qint64 offsetMs = m_timeSync->lastOffsetMs ();
+             // Skip the UAC prompt if the clock is already within 10 ms
+             // of NTP — Set-Date for a trivial delta is pointless.
+             if (offsetMs >= -10 && offsetMs <= 10) {
+               return;
+             }
+             wkjtx::TimeSyncManager::elevatedSyncSystemClock (offsetMs);
+             // PowerShell returns before the step is visible to new
+             // GetSystemTime calls in some edge cases; requery after
+             // 1.5 s so the badge reflects the new (near-zero) offset.
+             QTimer::singleShot (1500, m_timeSync, &wkjtx::TimeSyncManager::queryNow);
+           });
+
+  // Kick off the first query at startup, then every 5 minutes.
+  m_timeSync->startAutoRefresh (5 * 60 * 1000);
 
   menuBar ()->setCornerWidget (corner, Qt::TopRightCorner);
 

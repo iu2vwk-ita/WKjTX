@@ -57,6 +57,8 @@ namespace wkjtx {
   class CallsignDetector;
   class ProfileManager;
   class ProfileButton;
+  class TimeSyncManager;
+  class TimeSyncBadge;
 }
 
 class QProcessEnvironment;
@@ -433,6 +435,11 @@ private:
   // WKjTX radio profile quick-switch
   wkjtx::ProfileManager    * m_profileManager {nullptr};
   wkjtx::ProfileButton     * m_profileBtn[3]  {nullptr, nullptr, nullptr};
+
+  // WKjTX NTP offset monitor + elevated clock resync button
+  wkjtx::TimeSyncManager   * m_timeSync      {nullptr};
+  wkjtx::TimeSyncBadge     * m_timeSyncBadge {nullptr};
+  QLabel                   * m_ntpStatusLabel {nullptr};
   wkjtx::NewDxccDetector   * m_detDxcc       {nullptr};
   wkjtx::ZoneDetector      * m_detZone       {nullptr};
   wkjtx::GridDetector      * m_detGrid       {nullptr};
