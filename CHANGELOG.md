@@ -8,7 +8,21 @@ upstream JTDX version is preserved in internal Versions.cmake
 for code compatibility, but public releases are tagged
 `v0.1.0` → `v1.0.0` reflecting WKjTX's own delivery phases.
 
-## [v1.1.3] — 2026-04-22 — Bugfix: UPDATE DATA TLS + incremental build
+## [v1.1.3] — 2026-04-22 — Multilingual UI + UPDATE DATA TLS fix
+
+### Added
+
+- **19 languages shipped out of the box.** The JTDX-inherited
+  translations (ca_ES, da_DK, en_US, es_ES, et_EE, fr_FR, hr_HR,
+  hu_HU, it_IT, ja_JP, lv_LV, nl_NL, pl_PL, pt_BR, pt_PT, ru_RU,
+  sv_SE, zh_CN, zh_HK) are now compiled to `.qm` and embedded as
+  Qt resources. The corresponding menubar actions already existed
+  from the JTDX baseline; they now actually switch the UI without
+  a loose `.qm` drop-in. Upstream sources verified byte-identical
+  with `jtdx-project/jtdx` on GitHub — no translation regressions
+  relative to JTDX. User-supplied translations dropped in
+  `bin\translations\wkjtx_<locale>.qm` or `jtdx_<locale>.qm`
+  still take priority over the bundled resource.
 
 ### Fixed
 

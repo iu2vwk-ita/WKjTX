@@ -1,9 +1,12 @@
 # Version number components
 # WKjTX versioning is independent from upstream JTDX (originally 2.2.159).
-# v1.1.3 fixes UPDATE DATA failing with "TLS initialization failed" on
-# portable installs (OpenSSL 3 from MSYS2 needs OPENSSL_CONF + CA bundle
-# env vars set in run.bat) and an incremental-build failure in
-# scripts/build-wkjtx.sh where OMNIRIG_EXE was unset under `set -u`.
+# v1.1.3 ships the JTDX-inherited 19 translations as embedded Qt
+# resources so the Language menu works out of the box (no loose .qm
+# drop-in needed), fixes UPDATE DATA failing with "TLS initialization
+# failed" on portable installs (OpenSSL 3 from MSYS2 needs
+# OPENSSL_CONF + CA bundle env vars set in run.bat), and fixes an
+# incremental-build failure in scripts/build-wkjtx.sh where
+# OMNIRIG_EXE was unset under `set -u`.
 #
 # IMPORTANT: WSJTX_VERSION_32A is a BOOLEAN flag inherited from JTDX —
 # when non-zero the build appends "-32A" to the version patch string
