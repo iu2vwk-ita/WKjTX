@@ -4859,6 +4859,8 @@ list. The list can be maintained in Settings (F2).</string>
     <addaction name="separator"/>
     <addaction name="actionSingleShot"/>
     <addaction name="menuAuto_RX_frequency_Filter"/>
+    <addaction name="separator"/>
+    <addaction name="actionAutoCQ_after_QSO"/>
    </widget>
    <widget class="QMenu" name="menuDXpedition">
     <property name="title">
@@ -5328,6 +5330,20 @@ list. The list can be maintained in Settings (F2).</string>
    </property>
    <property name="toolTip">
     <string>Review queued qrz.com / eQSL uploads and retry or remove them.</string>
+   </property>
+  </action>
+  <action name="actionAutoCQ_after_QSO">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Auto-CQ after QSO</string>
+   </property>
+   <property name="toolTip">
+    <string>When enabled, WKjTX re-arms the Tx6 CQ message and re-enables TX automatically after every logged QSO, so the station resumes calling CQ without manual intervention. Clicking Halt TX always suspends this until TX is re-enabled manually.</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+Q</string>
    </property>
   </action>
   <action name="actionJTDX_Forum">

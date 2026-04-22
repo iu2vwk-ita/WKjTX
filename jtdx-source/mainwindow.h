@@ -177,6 +177,12 @@ private slots:
   void on_actionOpen_triggered();
   // v1.2.0: open the pending-uploads dialog (qrz.com / eQSL queue).
   void on_actionUpload_pending_triggered();
+  // v1.2.0: user toggle — after every logged QSO, re-arm Tx6 and
+  // enable TX so the station starts calling CQ again without manual
+  // intervention. Clicking "Halt TX" (or any code path that calls
+  // haltTx()) forces the user to re-enable TX manually, even while
+  // this toggle is on — that makes Halt a hard stop by design.
+  void on_actionAutoCQ_after_QSO_triggered(bool checked);
   void on_actionOpen_next_in_directory_triggered();
   void on_actionDecode_remaining_files_in_directory_triggered();
   void on_actionDelete_all_wav_files_in_SaveDir_triggered();
@@ -705,6 +711,8 @@ private:
   wkjtx::QrzUploader      * m_qrz            {nullptr};
   wkjtx::UploadQueue      * m_uploadQueue    {nullptr};
   wkjtx::UploadDispatcher * m_uploadDispatch {nullptr};
+  // v1.2.0: state for the "Auto-CQ after QSO" user toggle.
+  bool m_autoCQAfterQSO {false};
 
   QTimer m_guiTimer;
   QTimer ptt1Timer;                 //StartTx delay

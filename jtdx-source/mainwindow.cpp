@@ -1327,6 +1327,7 @@ void MainWindow::writeSettings()
   m_settings->setValue("Crossband160mHL",m_crossbandHLOptionEnabled);
   m_settings->setValue("QuickCall",m_autoTx);
   m_settings->setValue("AutoSequence",m_autoseq);
+  m_settings->setValue("AutoCQAfterQSO", m_autoCQAfterQSO); // v1.2.0
   m_settings->setValue("SpotText",m_spotText);
   m_settings->setValue("ClearWCallAtLog",ui->cbClearCallsign->isChecked ());
   m_settings->setValue("ClearWGridAtLog",ui->cbClearGrid->isChecked ());
@@ -1630,6 +1631,10 @@ void MainWindow::readSettings()
   if (m_autoseq) { clearDXfields(""); enableTab1TXRB(false); }
   ui->AutoSeqButton->setChecked(m_autoseq);
   setAutoSeqButtonStyle(m_autoseq);
+
+  // v1.2.0: Auto-CQ after QSO toggle restore.
+  m_autoCQAfterQSO = m_settings->value ("AutoCQAfterQSO", false).toBool ();
+  ui->actionAutoCQ_after_QSO->setChecked (m_autoCQAfterQSO);
 
   m_spotText=m_settings->value("SpotText","").toString();
   ui->spotLineEdit->setText(m_spotText);
@@ -2282,6 +2287,17 @@ void MainWindow::on_actionUpload_pending_triggered()
   if (!m_uploadDispatch || !m_uploadQueue) return;
   wkjtx::PendingUploadsDialog dlg {m_uploadQueue, m_uploadDispatch, this};
   dlg.exec ();
+}
+
+// v1.2.0: AutoSeq menu toggle — persist + take effect on next QSO.
+void MainWindow::on_actionAutoCQ_after_QSO_triggered(bool checked)
+{
+  m_autoCQAfterQSO = checked;
+  writeToALLTXT (QString ("Auto-CQ after QSO: ") + (checked ? "ON" : "OFF"));
+  statusBar ()->showMessage (checked
+      ? tr ("Auto-CQ after QSO: ON")
+      : tr ("Auto-CQ after QSO: OFF"),
+      3000);
 }
 
 void MainWindow::on_enableTxButton_clicked (bool checked)
@@ -6561,6 +6577,26 @@ void MainWindow::acceptQSO2(QDateTime const& QSO_date_off, QString const& call, 
     }
   }
   if (m_houndMode && !m_hisCall.isEmpty()) { clearDX (" cleared: QSO logged in DXpedition mode"); ui->dxCallEntry->setStyleSheet(QString("QLineEdit {color: %1; background: %2}").arg(Radio::convert_dark("#000000",m_useDarkStyle),Radio::convert_dark("#ffffff",m_useDarkStyle))); }
+
+  // v1.2.0: Auto-CQ after QSO — if the user enabled the toggle, re-arm
+  // Tx6 (CQ) and keep TX enabled so the station keeps calling.
+  // Gates:
+  //   * m_autoCQAfterQSO     — user toggle (menu AutoSeq → Auto-CQ).
+  //   * !m_houndMode         — DXpedition/Hound mode has no CQ path.
+  //   * m_mode != "WSPR-2"   — WSPR has no QSO semantics.
+  //   * m_enableTx            — user didn't click Halt TX during the
+  //                             QSO. If TX was halted mid-sequence
+  //                             m_enableTx is already false, and we
+  //                             honour that — Halt TX stays a hard
+  //                             stop. User must re-enable manually.
+  if (m_autoCQAfterQSO
+      && !m_houndMode
+      && m_mode != "WSPR-2"
+      && m_enableTx) {
+      on_txb6_clicked ();
+      writeToALLTXT ("Auto-CQ after QSO: re-armed Tx6 CQ");
+      statusBar ()->showMessage (tr ("Auto-CQ re-armed after QSO"), 4000);
+  }
 }
 
 void MainWindow::on_actionJT9_triggered()
