@@ -6,22 +6,55 @@ fork of [JTDX](https://sourceforge.net/p/jtdx/), itself forked from
 FT8, FT4, JT65, JT9, JT9+JT65, T10 and WSPR-2 — same decoders, same
 operating modes as upstream.
 
-## What's new in 1.1
+## What's new in 1.1.2 — NTP clock-offset badge + one-click system resync
 
-- **3-slot radio profile quick-switch** — three buttons in the top-right
-  menubar corner (next to Help). Slot 1 mirrors your base configuration;
-  slots 2 and 3 are independent overlays stored in separate INI files
-  under `%LOCALAPPDATA%/WKjTX/profiles/`. Left-click to switch radios
-  instantly (CAT + audio + transceiver reconnect). Left-click "+" on
-  empty slots opens a compact configurator with auto-detected serial
-  ports for CAT and PTT. Right-click for Configure / Rename / Hide /
-  Clear.
+![WKjTX v1.1.2 — NTP +18 ms badge (top-right) next to the IC-7300 radio profile button](docs/screenshots/v1.1.2-ntp-badge.png)
 
-  ![Radio profile buttons](docs/website/img/screenshot-radio-profiles.png)
+> Top-right corner of the menubar: the new **NTP +18 ms** badge shows
+> the live offset between your system clock and `pool.ntp.org`. It
+> sits right next to the three radio profile slots (IC-7300 active
+> in this screenshot) added in v1.1.
 
-  > Profile actions never overwrite the base `WKjTX.ini`. Mistakes in
-  > slot 2 or 3 stay in their own file — your main configuration is
-  > always safe.
+- **Live NTP offset** on the menubar — green under 100 ms, amber
+  100–500 ms, red over 500 ms or when NTP is unreachable. Queried
+  every 5 minutes in the background (silent, no admin).
+- **One-click resync.** Click the badge, confirm UAC once, and
+  the clock is stepped directly by the measured SNTP offset via
+  PowerShell `Set-Date` — straight to the Win32 `SetSystemTime`
+  API, so it works even if the Windows Time service is disabled
+  or misconfigured.
+- **Optional "install" mode.** Right-click the badge →
+  *Auto-sync system clock every 10 minutes (install, UAC)*. One
+  elevated call reconfigures Windows Time Service to poll
+  `pool.ntp.org` every 600 s and restarts `w32time`. From then on
+  the clock stays aligned silently as SYSTEM — **no more UAC
+  prompts** per sync. A second menu entry reverts to the Windows
+  default (`time.windows.com`, 1-week poll) when you want to back
+  out.
+- **No-op guard.** If the last measured offset is within ±10 ms
+  the badge no-ops on click instead of spawning a UAC prompt for
+  a trivial delta.
+
+### Earlier in 1.1
+
+- **Day / Night theme quick-toggle** *(v1.1.1)* — `Ctrl+Shift+D`
+  flips to Amber Classic (Day), `Ctrl+Shift+N` to Amber Night,
+  without opening Settings. Two dedicated entries also sit at the
+  top of the *Tema* menu.
+- **Date-filtered ADIF export** *(v1.1.1)* — *Export ADIF log*
+  now offers *Full log*, *Since last export*, *Last 7 / 30 days*,
+  or a custom date range. Filenames carry the range tag so
+  repeated exports don't overwrite each other.
+- **3-slot radio profile quick-switch** *(v1.1.0)* — three buttons
+  in the top-right menubar corner. Slot 1 mirrors your base
+  configuration; slots 2 and 3 are independent overlays stored in
+  separate INI files under `%LOCALAPPDATA%/WKjTX/profiles/`.
+  Left-click to switch radios instantly (CAT + audio + transceiver
+  reconnect). Left-click "+" on empty slots opens a compact
+  configurator with auto-detected serial ports for CAT and PTT.
+  Right-click for Configure / Rename / Hide / Clear. Profile
+  actions never touch the base `WKjTX.ini` — mistakes in slot 2
+  or 3 stay in their own file.
 
 ## What's different from JTDX
 
@@ -68,17 +101,10 @@ operating modes as upstream.
   (default warm dark), **Amber Night** (deeper black), **Amber High
   Contrast**, **Native** (OS default style) and **Dark (legacy JTDX)**.
   The active theme is persisted across sessions.
-- **3-slot radio profile quick-switch** *(NEW in 1.1)*: three buttons
-  in the menubar corner (next to Help). Slot 1 mirrors your base
-  configuration; slots 2 and 3 are independent overlays in
-  `%LOCALAPPDATA%/WKjTX/profiles/slot<N>.ini`. Left-click to switch
-  rigs (CAT + audio + transceiver reconnect). Empty slots show "+"
-  and open the compact configurator with auto-detected COM ports for
-  CAT and PTT. Right-click for Configure / Rename / Hide / Clear.
 - **Hamlib updater** opens the JTDX SourceForge Hamlib directory in
   your browser — manual drop-in of `libhamlib-5.dll` with an
   automatic `_old` backup slot.
-- **Independent versioning.** Currently at **1.1.0**. The upstream
+- **Independent versioning.** Currently at **1.1.2**. The upstream
   JTDX 2.2.x version number is no longer exposed.
 
 Planned in later releases: per-profile log routing, qrz.com upload.
