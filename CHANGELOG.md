@@ -8,6 +8,29 @@ upstream JTDX version is preserved in internal Versions.cmake
 for code compatibility, but public releases are tagged
 `v0.1.0` → `v1.0.0` reflecting WKjTX's own delivery phases.
 
+## [v1.1.3] — 2026-04-22 — Bugfix: UPDATE DATA TLS + incremental build
+
+### Fixed
+
+- **UPDATE DATA failed with "TLS initialization failed"** on portable
+  installs. The MSYS2-sourced OpenSSL 3 runtime that ships in `bin\`
+  needs `OPENSSL_CONF`, `SSL_CERT_FILE`, and `SSL_CERT_DIR` pointing
+  at its config + CA bundle, otherwise Qt's `QSslSocket` can't
+  initialise and every HTTPS fetch (`state_data.bin`, `grid_data.bin`,
+  `lotw-user-activity.csv`) aborts before the request leaves the app.
+  `run.bat` now sets the three env vars to
+  `%MSYS2_HOME%\mingw64\etc\ssl\...` before launching `wkjtx.exe`.
+  UPDATE DATA works out of the box on a fresh portable unzip.
+- **Incremental build broke on `OMNIRIG_EXE: unbound variable`**.
+  `scripts/build-wkjtx.sh` skips the dependency block when the MSYS2
+  toolchain is already present, so `OMNIRIG_EXE` was never exported
+  on the second and later runs and `set -u` aborted the script
+  before CMake ran. Added a default expansion
+  (`: "${OMNIRIG_EXE:=/c/Program Files (x86)/Afreet/OmniRig/OmniRig.exe}"`)
+  right before the CMake configure step so both cold and incremental
+  builds pick up the standard OmniRig install path. No behaviour
+  change when the dependency block has already set the variable.
+
 ## [v1.1.2] — 2026-04-22 — NTP clock-offset badge + one-click system resync
 
 ### Added
