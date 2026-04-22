@@ -1,3 +1,4 @@
+﻿/* WKJTX_THEME_ACTIVE */
 /* WKjTX — Amber Classic theme
  *
  * Visual language ported from FT8 Card Pro (IU2VWK).
@@ -27,8 +28,6 @@
 QWidget {
     background-color: #0a0907;
     color: #e8dfcf;
-    font-family: "Cascadia Mono", "Consolas", "Segoe UI", sans-serif;
-    font-size: 11px;
     selection-background-color: #2a2218;
     selection-color: #ffb347;
 }
@@ -273,23 +272,23 @@ QRadioButton::indicator:checked {
 /* ============================================================
    TABS
    ============================================================ */
+QTabBar {
+    qproperty-expanding: false;
+    qproperty-usesScrollButtons: true;
+    qproperty-drawBase: false;
+}
 QTabWidget::pane {
     background-color: #0a0907;
     border: 1px solid #2a2218;
     border-radius: 4px;
     top: -1px;
 }
-QTabBar::tab {
-    background-color: #14110d;
-    color: #a69070;
-    padding: 6px 14px;
-    margin-right: 2px;
+QTabBar::tab { padding: 3px 8px; margin-right: 1px;
     border: 1px solid #2a2218;
     border-bottom: none;
     border-top-left-radius: 4px;
     border-top-right-radius: 4px;
     font-weight: 500;
-    letter-spacing: 1px;
 }
 QTabBar::tab:hover {
     color: #ffb347;
@@ -314,7 +313,6 @@ QGroupBox {
     padding-top: 6px;
     color: #a69070;
     font-weight: 600;
-    letter-spacing: 1.5px;
 }
 QGroupBox::title {
     subcontrol-origin: margin;
@@ -348,9 +346,6 @@ QHeaderView::section {
     border-right: 1px solid #2a2218;
     border-bottom: 1px solid #2a2218;
     font-weight: 600;
-    letter-spacing: 1px;
-    text-transform: uppercase;
-    font-size: 10px;
 }
 QHeaderView::section:hover {
     color: #ffb347;
@@ -417,7 +412,6 @@ QProgressBar {
     border-radius: 3px;
     text-align: center;
     color: #e8dfcf;
-    font-family: "Cascadia Mono", monospace;
 }
 QProgressBar::chunk {
     background-color: qlineargradient(x1:0, x2:1, stop:0 #c46d00, stop:1 #ffb347);
@@ -488,8 +482,6 @@ QStatusBar {
     background-color: #14110d;
     color: #a69070;
     border-top: 1px solid #2a2218;
-    font-size: 10px;
-    letter-spacing: 1px;
 }
 QStatusBar::item {
     border: none;
@@ -523,5 +515,4 @@ QDockWidget::title {
     border: 1px solid #2a2218;
     color: #ff9500;
     font-weight: 600;
-    letter-spacing: 2px;
 }

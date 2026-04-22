@@ -47,6 +47,10 @@ set (WKJTX_SOURCES
   DataUpdater.hpp
   AdifImporter.cpp
   AdifImporter.hpp
+  AdifExporter.cpp
+  AdifExporter.hpp
+  AdifExportDialog.cpp
+  AdifExportDialog.hpp
   detectors/Maidenhead.cpp
   detectors/Maidenhead.hpp
   detectors/ZoneTables.hpp

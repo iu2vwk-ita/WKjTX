@@ -181,6 +181,8 @@
 #include "JTDXMessageBox.hpp"
 #include "wkjtx/DataUpdater.hpp"
 #include "wkjtx/AdifImporter.hpp"
+#include "wkjtx/AdifExporter.hpp"
+#include "wkjtx/AdifExportDialog.hpp"
 
 #include <QDateTime>
 #include <QDesktopServices>
@@ -5287,9 +5289,41 @@ void Configuration::impl::on_export_adif_push_button_clicked ()
       return;
     }
 
+  // Ask the user what slice of the log to export. v1.1.1 adds a date
+  // range picker on top of the previous "copy the whole log" flow so
+  // incremental LoTW / logger uploads don't need manual trimming.
+  AdifExportDialog pick {this};
+  if (pick.exec () != QDialog::Accepted) return;
+
+  QDate const fromDate = pick.fromDate ();
+  QDate const toDate   = pick.toDate ();
+
+  // Filename hint carries the date range (or "full") so users can keep
+  // multiple exports side by side without renaming by hand.
+  QString rangeTag;
+  switch (pick.selectedMode ()) {
+  case AdifExportDialog::Mode::FullLog:
+    rangeTag = QStringLiteral ("full");
+    break;
+  case AdifExportDialog::Mode::SinceLastExport:
+    rangeTag = QStringLiteral ("since_%1").arg (fromDate.toString ("yyyyMMdd"));
+    break;
+  case AdifExportDialog::Mode::Last7Days:
+    rangeTag = QStringLiteral ("last7d");
+    break;
+  case AdifExportDialog::Mode::Last30Days:
+    rangeTag = QStringLiteral ("last30d");
+    break;
+  case AdifExportDialog::Mode::CustomRange:
+    rangeTag = QStringLiteral ("%1_to_%2")
+        .arg (fromDate.toString ("yyyyMMdd"))
+        .arg (toDate.toString ("yyyyMMdd"));
+    break;
+  }
+
   QString const startPath =
       QStandardPaths::writableLocation (QStandardPaths::DocumentsLocation)
-      + QLatin1String ("/wkjtx_log_")
+      + QLatin1String ("/wkjtx_log_") + rangeTag + QLatin1Char ('_')
       + QDateTime::currentDateTime ().toString ("yyyyMMdd_HHmmss")
       + QLatin1String (".adi");
   QString const destPath = QFileDialog::getSaveFileName (
@@ -5301,26 +5335,36 @@ void Configuration::impl::on_export_adif_push_button_clicked ()
       return;
     }
 
-  // Overwrite requested file. QFile::copy refuses to overwrite so
-  // remove first; safe because the user picked the target via
-  // getSaveFileName which already confirmed any overwrite.
-  if (QFile::exists (destPath))
-    {
-      QFile::remove (destPath);
-    }
-  if (!QFile::copy (logPath, destPath))
+  AdifExporter::Stats stats = AdifExporter::run (logPath, destPath, fromDate, toDate);
+  if (!stats.ok)
     {
       JTDXMessageBox::critical_message (this, tr ("Export ADIF"),
                                         tr ("Could not write the file."),
-                                        destPath);
+                                        stats.errorMessage);
       return;
     }
 
+  // Remember the export moment so the next "Since last export" anchor
+  // is ready. Anchor is today, so subsequent runs keep picking up
+  // everything after this point.
+  AdifExportDialog::rememberExport (QDate::currentDate ());
+
   QFileInfo fi {destPath};
+  QString summary;
+  if (fromDate.isValid () || toDate.isValid ()) {
+    summary = tr ("Read: %1\nExported: %2\nSkipped (before range): %3\nSkipped (after range): %4\nSkipped (missing/bad date): %5")
+        .arg (stats.totalRead)
+        .arg (stats.exported)
+        .arg (stats.skippedBelow)
+        .arg (stats.skippedAbove)
+        .arg (stats.malformedDate);
+  } else {
+    summary = tr ("Records exported: %1").arg (stats.exported);
+  }
   JTDXMessageBox::information_message (this, tr ("Export ADIF"),
                                        tr ("Export complete."),
-                                       QString {},
-                                       tr ("%1 (%2 bytes)").arg (fi.fileName ()).arg (fi.size ()));
+                                       tr ("%1 (%2 bytes)").arg (fi.fileName ()).arg (fi.size ()),
+                                       summary);
 }
 
 
@@ -6539,6 +6583,15 @@ void Configuration::impl::set_application_font (QFont const& font)
     if (qApp->styleSheet ().size ())
     {
       auto sheet = qApp->styleSheet ();
+      // WKjTX: if a WKjTX amber theme is active (marker embedded in the
+      // QSS), keep the whole sheet as-is. Otherwise the legacy JTDX
+      // branches below would overwrite our theme with qdarkstyle or an
+      // empty string every time the font changes.
+      if (sheet.contains (QLatin1String ("WKJTX_THEME_ACTIVE"))) {
+        qApp->setStyleSheet (sheet);
+        for (auto& widget : qApp->topLevelWidgets ()) widget->updateGeometry ();
+        return;
+      }
       if (sheet.startsWith("file:///")) {
         sheet.remove ("file:///");
         QFile sf {sheet};

@@ -88,6 +88,11 @@ void ThemeManager::applyTheme (ThemeId id)
 
   QSettings settings;
   settings.setValue (QStringLiteral ("theme/current"), idKey (id));
+  // Keep the legacy JTDX "UseDarkStyle" flag in sync so
+  // Configuration::set_application_font's legacy branch stays consistent
+  // with the ThemeManager selection. Only DarkLegacy means "apply the old
+  // QDarkStyleSheet"; every other WKjTX theme must clear the flag.
+  settings.setValue (QStringLiteral ("UseDarkStyle"), id == ThemeId::DarkLegacy);
   settings.sync ();
 
   emit themeChanged (id);

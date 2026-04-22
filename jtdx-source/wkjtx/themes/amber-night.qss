@@ -1,3 +1,4 @@
+﻿/* WKJTX_THEME_ACTIVE */
 /* WKjTX — Amber Night theme
  *
  * Variant of amber-classic with lower luminance for nighttime HF
@@ -15,8 +16,6 @@
 QWidget {
     background-color: #060504;
     color: #b8af9f;
-    font-family: "Cascadia Mono", "Consolas", "Segoe UI", sans-serif;
-    font-size: 11px;
     selection-background-color: #1f1810;
     selection-color: #e08a20;
 }
@@ -136,16 +135,19 @@ QCheckBox::indicator:checked, QRadioButton::indicator:checked {
     border: 1px solid #e08a20;
 }
 
+QTabBar {
+    qproperty-expanding: false;
+    qproperty-usesScrollButtons: true;
+    qproperty-drawBase: false;
+}
 QTabWidget::pane {
     background-color: #060504; border: 1px solid #1f1810;
     border-radius: 4px; top: -1px;
 }
-QTabBar::tab {
-    background-color: #0f0c08; color: #75664a; padding: 6px 14px; margin-right: 2px;
+QTabBar::tab { padding: 3px 8px; margin-right: 1px;
     border: 1px solid #1f1810; border-bottom: none;
     border-top-left-radius: 4px; border-top-right-radius: 4px;
-    font-weight: 500; letter-spacing: 1px;
-}
+    font-weight: 500; }
 QTabBar::tab:hover { color: #e08a20; background-color: #12100c; }
 QTabBar::tab:selected {
     background-color: #060504; color: #c46d00; border-color: #c46d00;
@@ -155,8 +157,7 @@ QTabBar::tab:selected {
 QGroupBox {
     background-color: transparent; border: 1px solid #1f1810; border-radius: 4px;
     margin-top: 10px; padding-top: 6px; color: #75664a;
-    font-weight: 600; letter-spacing: 1.5px;
-}
+    font-weight: 600; }
 QGroupBox::title {
     subcontrol-origin: margin; subcontrol-position: top left;
     padding: 0 6px; left: 8px; color: #c46d00;
@@ -174,8 +175,7 @@ QTableView::item:hover, QTreeView::item:hover, QListView::item:hover {
 QHeaderView::section {
     background-color: #0f0c08; color: #75664a; padding: 5px;
     border: none; border-right: 1px solid #1f1810; border-bottom: 1px solid #1f1810;
-    font-weight: 600; letter-spacing: 1px; text-transform: uppercase; font-size: 10px;
-}
+    font-weight: 600; }
 
 QScrollBar:vertical { background: #060504; width: 12px; border: none; margin: 0; }
 QScrollBar::handle:vertical {
@@ -223,8 +223,7 @@ QToolButton:pressed, QToolButton:checked {
 
 QStatusBar {
     background-color: #0f0c08; color: #75664a;
-    border-top: 1px solid #1f1810; font-size: 10px; letter-spacing: 1px;
-}
+    border-top: 1px solid #1f1810; }
 QStatusBar QLabel { color: #75664a; padding: 2px 6px; }
 
 QSplitter::handle { background: #1f1810; }

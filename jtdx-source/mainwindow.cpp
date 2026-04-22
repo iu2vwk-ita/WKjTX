@@ -3095,6 +3095,32 @@ void MainWindow::createThemeMenu ()
   auto * tm = new wkjtx::ThemeManager (qApp, this);
   tm->loadPersisted ();
 
+  // Quick Day / Night toggles at the top of the menu — one click, no
+  // Settings dialog. Day maps to Amber Classic, Night to Amber Night.
+  auto * actDay = menu->addAction (tr ("Day"));
+  actDay->setCheckable (true);
+  actDay->setShortcut (QKeySequence (QStringLiteral ("Ctrl+Shift+D")));
+  actDay->setData (wkjtx::ThemeManager::idKey (wkjtx::ThemeId::AmberClassic));
+  if (tm->currentTheme () == wkjtx::ThemeId::AmberClassic) actDay->setChecked (true);
+  group->addAction (actDay);
+  connect (actDay, &QAction::triggered, this,
+           [tm] { tm->applyTheme (wkjtx::ThemeId::AmberClassic); });
+
+  auto * actNight = menu->addAction (tr ("Night"));
+  actNight->setCheckable (true);
+  actNight->setShortcut (QKeySequence (QStringLiteral ("Ctrl+Shift+N")));
+  actNight->setData (wkjtx::ThemeManager::idKey (wkjtx::ThemeId::AmberNight));
+  if (tm->currentTheme () == wkjtx::ThemeId::AmberNight) actNight->setChecked (true);
+  group->addAction (actNight);
+  connect (actNight, &QAction::triggered, this,
+           [tm] { tm->applyTheme (wkjtx::ThemeId::AmberNight); });
+
+  menu->addSeparator ();
+
+  // Full list — Day/Night are included again so users can still see the
+  // "Amber Classic" / "Amber Night" labels, and so the exclusive radio
+  // group covers every theme. Picking either entry from the list keeps
+  // the quick Day/Night action above checked via the shared group.
   struct Entry { wkjtx::ThemeId id; };
   Entry const entries[] = {
     {wkjtx::ThemeId::AmberClassic},
@@ -3113,6 +3139,14 @@ void MainWindow::createThemeMenu ()
     connect (act, &QAction::triggered, this,
              [this, tm, id = e.id] { tm->applyTheme (id); });
   }
+
+  // Keep Day/Night quick actions in sync when the user picks a theme from
+  // the list (or when any other code path calls applyTheme).
+  connect (tm, &wkjtx::ThemeManager::themeChanged, this,
+           [actDay, actNight] (wkjtx::ThemeId id) {
+             actDay->setChecked (id == wkjtx::ThemeId::AmberClassic);
+             actNight->setChecked (id == wkjtx::ThemeId::AmberNight);
+           });
 
   // Insert before the Help menu so "Tema" sits right next to Lingua/Help.
   auto const topActions = menuBar ()->actions ();

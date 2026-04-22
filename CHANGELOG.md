@@ -8,6 +8,47 @@ upstream JTDX version is preserved in internal Versions.cmake
 for code compatibility, but public releases are tagged
 `v0.1.0` → `v1.0.0` reflecting WKjTX's own delivery phases.
 
+## [v1.1.1] — 2026-04-22 — Theme quick-toggle, tab fix, date-filtered ADIF export
+
+### Added
+
+- **Day / Night quick toggle** in the *Tema* menu. Two dedicated entries at
+  the top of the menu (and keyboard shortcuts `Ctrl+Shift+D` and
+  `Ctrl+Shift+N`) flip the UI between the Amber Classic (Day) and Amber
+  Night themes without opening Settings.
+- **Date-filtered ADIF export.** The *Export ADIF log* action now opens
+  a picker with five presets:
+  - *Full log* — every QSO (previous behaviour).
+  - *Since last export* — anchored to the date of the previous export;
+    ideal for incremental LoTW or logger uploads.
+  - *Last 7 days* / *Last 30 days* — common quick ranges.
+  - *Custom date range* — arbitrary from/to via calendar popups.
+  The output filename carries the range tag automatically (e.g.
+  `wkjtx_log_since_20260415_20260422_113057.adi`) so repeated exports
+  don't overwrite each other.
+
+### Fixed
+
+- **Tab-bar text truncation in non-default themes.** `QTabBar::tab` had
+  `font-family: Cascadia Mono`, `letter-spacing: 1–2px`,
+  `text-transform: uppercase`, and `padding: 6-7px 14-16px` in the amber
+  themes. Combined they exceeded the Settings dialog width and Qt's
+  `expanding: true` squeezed every tab to the same width, clipping the
+  text on both sides (e.g. "enera" instead of "General"). Stripped all
+  font / spacing / transform overrides from the themes, reduced padding
+  to `3px 8px`, and added `qproperty-expanding: false` +
+  `usesScrollButtons: true` so tabs keep their natural width and scroll
+  when they overflow.
+- **Theme switching didn't actually swap themes** after the first use.
+  `Configuration::impl::set_application_font` re-applied the legacy
+  QDarkStyleSheet every time it was called (startup, font change,
+  Settings save), clobbering whatever amber theme was live. Added a
+  `WKJTX_THEME_ACTIVE` marker to each amber QSS and an early-return in
+  `set_application_font` that preserves the current sheet when the
+  marker is present. `ThemeManager::applyTheme` now also keeps the
+  legacy `UseDarkStyle` flag in QSettings in sync (true only for the
+  *Dark (legacy JTDX)* theme) so both code paths agree.
+
 ## [v1.1.0] — 2026-04-21 — Radio profile quick-switch
 
 ### Added
