@@ -3124,8 +3124,11 @@ void MainWindow::on_pbSpotDXCall_clicked ()
 }
 
 void MainWindow::msgBox(QString t) { msgBox0.setText(t); msgBox0.translate_buttons(); msgBox0.exec(); }
-void MainWindow::on_actionJTDX_Web_Site_triggered() { m_manual.display_html_url (QUrl {"https://iu2vwk.com/wkjtx/"}, ""); }
-void MainWindow::on_actionJTDX_Forum_triggered() { m_manual.display_html_url (QUrl {"https://github.com/iu2vwk-ita/WKjTX/discussions"}, ""); }
+// WKjTX v1.2.0: open directly via QDesktopServices so DisplayManual's
+// versioned-HTML fallback (which appends "-<version>.html" when the
+// HEAD request 404s) can't mangle these plain landing URLs.
+void MainWindow::on_actionJTDX_Web_Site_triggered() { QDesktopServices::openUrl (QUrl {"https://iu2vwk.com/"}); }
+void MainWindow::on_actionJTDX_Forum_triggered()    { QDesktopServices::openUrl (QUrl {"https://github.com/iu2vwk-ita/WKjTX/"}); }
 
 /*Display local copy of manual
 void MainWindow::on_actionLocal_User_Guide_triggered()
