@@ -654,6 +654,28 @@ MainWindow::MainWindow(bool multiple, QSettings * settings, QSharedMemory *shdme
     }
   });
 
+  // v1.2.0: SwitchProfile and EnableTx UDP commands (used by the
+  // WKjTX Companion Stream Deck plugin).
+  connect (m_messageClient, &MessageClient::switch_profile,
+           [this] (qint32 slot_index) {
+      if (!m_config.accept_udp_requests ()) return;
+      if (!m_profileManager) return;
+      if (slot_index < 1 || slot_index > 3) return;
+      if (m_profileManager->activeSlot () == slot_index) return;
+      switchToProfile (slot_index);
+  });
+
+  connect (m_messageClient, &MessageClient::enable_tx,
+           [this] (bool enable) {
+      if (!m_config.accept_udp_requests ()) return;
+      // Click only when the current state mismatches the request so
+      // repeated commands stay idempotent. enableTxButton is a
+      // checkable button; its `isChecked()` reflects the live state.
+      if (ui->enableTxButton->isChecked () != enable) {
+          ui->enableTxButton->click ();
+      }
+  });
+
   // Hook up WSPR band hopping
   connect (ui->band_hopping_schedule_push_button, &QPushButton::clicked
            , &m_WSPR_band_hopping, &WSPRBandHopping::show_dialog);

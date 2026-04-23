@@ -103,6 +103,16 @@ public:
   // and optionally trigger CQ or directional CQ message transmission
   Q_SIGNAL void trigger_CQ (QString const& direction, bool tx_period, bool send);
 
+  // WKjTX v1.2.0: external UDP request to switch the active radio
+  // profile slot (1..3). MainWindow hands this to ProfileManager.
+  Q_SIGNAL void switch_profile (qint32 slot_index);
+
+  // WKjTX v1.2.0: external UDP request to enable / disable the TX
+  // button. MainWindow clicks the enableTxButton only if its current
+  // checked state mismatches the request, so repeated commands are
+  // a no-op.
+  Q_SIGNAL void enable_tx (bool enable);
+
   // this signal is emitted when network errors occur or if a host
   // lookup fails
   Q_SIGNAL void error (QString const&) const;
