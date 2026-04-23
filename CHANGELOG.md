@@ -8,6 +8,146 @@ upstream JTDX version is preserved in internal Versions.cmake
 for code compatibility, but public releases are tagged
 `v0.1.0` → `v1.0.0` reflecting WKjTX's own delivery phases.
 
+## [v1.2.0] — 2026-04-23 — qrz.com Logbook + Auto-CQ + NTP time sync
+
+This is the first public release to ship the qrz.com Logbook
+integration and the automatic-CQ-after-QSO workflow. Since the
+v1.1.3 tag was rolled back before wide distribution, v1.2.0 also
+bundles the v1.1.3 multilingual UI and UPDATE DATA TLS fix, plus
+the v1.1.2 NTP clock-offset badge for operators upgrading directly
+from v1.1.1 or earlier.
+
+### Headline features
+
+- **qrz.com Logbook** — upload every logged QSO to your qrz.com
+  Logbook automatically (or queue for manual upload), download your
+  entire qrz.com logbook for Worked-B4 colouring in WKjTX.
+  (See Settings → Reporting → qrz.com Logbook.)
+- **Auto-CQ after QSO** — WKjTX re-arms the Tx6 CQ message and
+  re-enables TX automatically after every logged QSO, so the
+  station resumes calling CQ without manual intervention. Toggle
+  under AutoSeq → Auto-CQ after QSO (`Ctrl+Shift+Q`).
+- **NTP time-sync badge** (inherited from v1.1.2, re-surfaced for
+  v1.1.1 upgraders) — top-right menubar badge shows live system
+  clock drift against `pool.ntp.org`; one click steps the clock
+  with an elevated `Set-Date`.
+
+### Added
+
+- **qrz.com Logbook upload** (`Settings → Reporting → qrz.com
+  Logbook`). Enter your Logbook API Key (qrz.com → My Account →
+  Logbook API → API Key) and pick an upload mode:
+  - *Automatic (upload each QSO)* — every logged QSO is pushed as
+    soon as you click Log.
+  - *Manual queue only* — QSOs park in the pending queue; you
+    trigger uploads from `File → Upload pending QSOs…`.
+  Failed uploads (network error, API reject) stay in the queue with
+  the last error visible so you can retry. Queue is persisted to
+  `%LOCALAPPDATA%\WKjTX\upload_queue.json` and survives restarts.
+  (Screenshots: `docs/screenshots/v1.2.0-qrz-settings.png`.)
+- **qrz.com log download** (`File → Download log from qrz.com…`)
+  pulls your entire qrz.com Logbook into the local B4-matching
+  cache so previously-worked stations are flagged on the band in
+  any fresh install. Uses the same Logbook API Key as upload.
+  (Screenshot: `docs/screenshots/v1.2.0-qrz-download-menu.png`.)
+- **eQSL queue parity** — eQSL now shares the same manual/automatic
+  mode combo and pending-queue UI as qrz.com. Previous eQSL
+  behaviour (auto-only, no retry on failure) is preserved as the
+  default mode.
+- **Pending Uploads dialog** — inspect the queue, see per-upload
+  service / callsign / band / mode / date / attempt count / last
+  error, retry individual rows or the whole queue, delete rows.
+- **Exit prompt** — if the upload queue is non-empty at app close,
+  you're prompted *Upload now / Later / Discard*. *Later* keeps
+  the queue on disk for the next launch.
+- **Auto-CQ after QSO** toggle in the `AutoSeq` menu with a
+  first-enable risk warning (unattended-TX acknowledgement) and a
+  configurable window duration (1…999 minutes, default 30). Each
+  logged QSO inside the window extends the deadline by another
+  full duration. Clicking Halt TX is always a hard stop — the
+  window is cleared and you must re-enable Auto-CQ manually.
+  (Screenshot: `docs/screenshots/v1.2.0-autocq-menu.png`.)
+- **Auto-CQ sustained window** — while the window is active, WKjTX
+  re-arms Tx6 and re-enables TX every TX slot until the deadline
+  hits or until someone answers. The sequencer's natural
+  "no-stuck-CQ-loops" behaviour (JTDX's default) is preserved —
+  WKjTX only nudges after the slot completes.
+- **Auto-CQ secondary triggers** — arming now works even when the
+  operator never opens the log dialog (edge-detect: 73 TX
+  finished) and even when they log before the final 73 is actually
+  transmitted (fallback kick-timer fires 3.5 s after acceptQSO2 if
+  the sequencer gate stalls).
+- **UDP commands `SwitchProfile` (type 52)** and **`EnableTx`
+  (type 53)** in the outgoing message protocol, so companion tools
+  (WKjTX Stream Deck plugin, external keyers) can switch radio
+  profiles and toggle Enable TX remotely over UDP. Both commands
+  are idempotent — re-sending the same state is a no-op.
+- **19 languages** shipped out of the box (carried forward from
+  v1.1.3): ca_ES, da_DK, en_US, es_ES, et_EE, fr_FR, hr_HR,
+  hu_HU, it_IT, ja_JP, lv_LV, nl_NL, pl_PL, pt_BR, pt_PT, ru_RU,
+  sv_SE, zh_CN, zh_HK. Embedded as Qt resources; user-supplied
+  `wkjtx_<locale>.qm` / `jtdx_<locale>.qm` in `bin\translations\`
+  still take priority over the bundled resource.
+- **NTP time-sync badge** (from v1.1.2) in the top-right menubar
+  corner. Green below 100 ms drift, amber 100–500 ms, red 500+ ms
+  or unreachable. Click to trigger an elevated `Set-Date` resync.
+  (Screenshot: `docs/screenshots/v1.2.0-ntp-badge.png`.)
+
+### Fixed
+
+- **UPDATE DATA TLS initialization** (carried forward from v1.1.3)
+  now works out of the box on portable installs. `run.bat` sets
+  `OPENSSL_CONF`, `SSL_CERT_FILE`, `SSL_CERT_DIR` to the MSYS2-
+  sourced OpenSSL 3 config + CA bundle before launching the exe.
+- **Auto-CQ no longer pre-empts the final 73 TX.** The pending
+  arm waits for `m_nlasttx == 5/6` and `!m_transmitting` before
+  clicking Tx6, so the 73 that closes the QSO is never truncated.
+- **Auto-CQ re-arms even when the sequencer parks TX after 73.**
+  The arm path re-clicks Enable TX if JTDX's auto-seq shut it off
+  because nobody was calling back.
+- **Auto-CQ arms for operators who log before the 73 is sent.** A
+  fallback kick-timer (3.5 s after `acceptQSO2`) force-arms
+  Tx6+Enable TX when the natural sequencer path never advances
+  `m_nlasttx` past 4. Diagnostics in `ALL.TXT` distinguish
+  `via sequencer` vs `via kick-timer` arming.
+- **Help menu `WKjTX Web site` link** now opens
+  `https://iu2vwk.com/wkjtx/` instead of the inherited JTDX URL.
+- **Help menu `Local User Guide` entries** bypass the upstream
+  `DisplayManual` versioned-HTML fallback that returned 404s
+  against WKjTX's own documentation layout.
+- **`wkjtx/` subdirectory build** — `Configuration.hpp` include in
+  the wkjtx module now uses the correct `../` relative prefix, so
+  incremental builds after a clean `CMakeCache.txt` don't abort on
+  missing header.
+- **Incremental build `OMNIRIG_EXE: unbound variable`** (carried
+  forward from v1.1.3). `scripts/build-wkjtx.sh` now defaults the
+  variable before the CMake configure step so both cold and
+  incremental builds pick up the OmniRig install path.
+
+### Known issues
+
+- **Radio VFO tune not followed** on some rigs (reported on v1.1.2
+  pre-rollback, unverified on v1.2.0). If you tune your radio's
+  VFO while WKjTX is running, outgoing TX may use the cached
+  frequency instead of the new one. Workaround: switch profile or
+  restart WKjTX after tuning. Root cause investigation pending —
+  Hamlib polling cadence vs profile-switch regression.
+- **Unsigned binary**. Windows SmartScreen shows *Windows
+  protected your PC*; click *More info → Run anyway*. Authenticode
+  signing is still deferred.
+
+### Notes for upgraders
+
+- Users on **v1.1.2**: this release brings qrz.com, Auto-CQ, the
+  19 bundled languages, the UPDATE DATA TLS fix, and the UDP
+  protocol extensions on top of everything you already have.
+- Users on **v1.1.3** (never publicly released): the multilingual
+  UI and the UPDATE DATA TLS fix already in your tree are
+  preserved; everything new is the qrz.com suite, Auto-CQ, and the
+  UDP 52 / 53 commands.
+- Users on **v1.1.0 / v1.1.1**: you additionally gain the NTP
+  time-sync badge and Set-Date resync from v1.1.2.
+
 ## [v1.1.3] — 2026-04-22 — Multilingual UI + UPDATE DATA TLS fix
 
 ### Added
