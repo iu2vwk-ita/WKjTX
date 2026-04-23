@@ -75,6 +75,13 @@ class QTime;
 class WSPRBandHopping;
 class HelpTextWindow;
 class EQSL;
+namespace wkjtx {
+  class QrzUploader;
+  class QrzDownloader;
+  class UploadQueue;
+  class UploadDispatcher;
+  class PendingUploadsDialog;
+}
 class WSPRNet;
 class SoundOutput;
 class Modulator;
@@ -169,6 +176,16 @@ private slots:
 //  void on_actionLocal_User_Guide_triggered();
   void on_actionWide_Waterfall_triggered();
   void on_actionOpen_triggered();
+  // v1.2.0: open the pending-uploads dialog (qrz.com / eQSL queue).
+  void on_actionUpload_pending_triggered();
+  // v1.2.0: FETCH log from qrz.com into local log (incremental).
+  void on_actionDownload_qrz_triggered();
+  // v1.2.0: user toggle — after every logged QSO, re-arm Tx6 and
+  // enable TX so the station starts calling CQ again without manual
+  // intervention. Clicking "Halt TX" (or any code path that calls
+  // haltTx()) forces the user to re-enable TX manually, even while
+  // this toggle is on — that makes Halt a hard stop by design.
+  void on_actionAutoCQ_after_QSO_triggered(bool checked);
   void on_actionOpen_next_in_directory_triggered();
   void on_actionDecode_remaining_files_in_directory_triggered();
   void on_actionDelete_all_wav_files_in_SaveDir_triggered();
@@ -268,6 +285,28 @@ private slots:
   void on_rrrCheckBox_stateChanged(int arg1);
   void on_rrr1CheckBox_stateChanged(int arg1);
   void set_ntx(int n);
+  // v1.2.0: per-tick check from guiUpdate() that arms Tx6 once the
+  // final 73 TX of a logged QSO has completed. Gated behind
+  // m_autoCQPending which acceptQSO2 sets.
+  void maybeArmAutoCq();
+  // v1.2.0: per-second check that re-arms CQ while m_autoCQActive is
+  // true. Called from guiUpdate's once-per-second block.
+  void sustainAutoCq();
+  // v1.2.0: unconditional arm — click Tx6 and, if necessary, click
+  // the Enable TX button. Shared by maybeArmAutoCq (natural sequencer
+  // path) and autoCqKickFired (timed fallback). Opens the active
+  // window so sustainAutoCq takes over afterwards.
+  void forceArmAutoCq();
+  // v1.2.0: fallback kick — scheduled by acceptQSO2 on m_autoCqKickTimer
+  // so that the Auto-CQ arm still happens even when the sequencer
+  // never advances m_nlasttx to 5/6 (e.g. operators who log before
+  // the final 73 is actually transmitted). Re-arms itself by 1s if
+  // TX is still in progress when it fires.
+  void autoCqKickFired();
+  // v1.2.0: show warning + duration dialog on toggle-on. Returns
+  // true if the user accepted; false if they cancelled (so the
+  // toggle is reverted).
+  bool promptAutoCqActivation();
   void on_txb2_clicked();
   void on_txb3_clicked();
   void on_txb4_clicked();
@@ -693,6 +732,47 @@ private:
 
   WSPRNet *wsprNet;
   EQSL *Eqsl;
+  // v1.2.0: qrz.com + unified upload queue with auto/manual modes.
+  wkjtx::QrzUploader      * m_qrz            {nullptr};
+  wkjtx::QrzDownloader    * m_qrzDownloader  {nullptr};
+  wkjtx::UploadQueue      * m_uploadQueue    {nullptr};
+  wkjtx::UploadDispatcher * m_uploadDispatch {nullptr};
+  // v1.2.0: state for the "Auto-CQ after QSO" user toggle.
+  bool m_autoCQAfterQSO {false};
+  // v1.2.0: set by acceptQSO2 when the auto-CQ toggle is on; cleared
+  // by the periodic re-arm check in guiUpdate once TX of the final
+  // 73/RR73 has completed so we never pre-empt the 73 with a CQ.
+  bool m_autoCQPending {false};
+  // v1.2.0: true while the auto-CQ window is active (between a first
+  // arm after acceptQSO2 and the user-configured minute-deadline).
+  // While true, guiUpdate sustains the CQ loop by re-enabling TX and
+  // re-arming Tx6 if the sequencer parks itself after an unanswered
+  // call. Cleared by deadline, Halt TX, or toggle-off.
+  bool m_autoCQActive {false};
+  // Wall-clock deadline for the current auto-CQ window. Re-computed
+  // from m_autoCQDurationMin each time maybeArmAutoCq() fires — so
+  // every logged QSO extends the window by another full duration
+  // ("keep calling CQ for N more minutes from my last contact").
+  qint64 m_autoCQDeadlineMs {0};
+  // User-configured window size. 1..999 minutes, default 30. Stored
+  // under QSettings key AutoCQDurationMin.
+  int m_autoCQDurationMin {30};
+  // First-enable acknowledgement of the risk warning. Persisted under
+  // QSettings key AutoCQAcknowledged. Once true the warning is not
+  // shown again on subsequent toggle-on, only the duration prompt.
+  bool m_autoCQAcknowledged {false};
+  // Edge-detect state for the secondary auto-CQ trigger — used when
+  // the operator does NOT have Prompt-to-log / Auto-log enabled,
+  // so acceptQSO2 never fires. When m_transmitting transitions from
+  // true → false while m_nlasttx == 5 we know a 73 just finished on
+  // air and we should open the auto-CQ window. Tracked across
+  // guiUpdate ticks.
+  bool m_autoCQLastTransmitting {false};
+  // Fallback single-shot armed by acceptQSO2. Fires ~3.5 s after the
+  // QSO is logged and calls forceArmAutoCq() if TX is idle. Halt TX,
+  // toggle-off, or a successful natural-path arm via maybeArmAutoCq
+  // all stop it before it fires.
+  QTimer m_autoCqKickTimer;
 
   QTimer m_guiTimer;
   QTimer ptt1Timer;                 //StartTx delay

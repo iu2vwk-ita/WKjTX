@@ -979,12 +979,34 @@ add_custom_target (etags COMMAND ${ETAGS} -o ${CMAKE_SOURCE_DIR}/TAGS -R ${sourc
 
 
 # Qt i18n
-# WKjTX 1.0: ship English only. User-contributed translations are loaded
-# at runtime from the "translations/" directory next to the executable
-# (see main.cpp). Drop a compiled jtdx_<locale>.qm there to enable a
-# language without a rebuild.
+# WKjTX 1.1.3: ship all 19 JTDX-inherited languages as embedded Qt
+# resources so they are available out of the box — no loose .qm file
+# drop required. The corresponding menubar actions
+# (mainwindow.cpp::set_language) have existed since the JTDX baseline.
+# User-contributed translations still load from the "translations/"
+# directory next to the executable (see main.cpp); drop a compiled
+# wkjtx_<locale>.qm or jtdx_<locale>.qm there to override the bundled
+# resource or add a language that isn't in this list.
 set (LANGUAGES
+  ca_ES
+  da_DK
   en_US
+  es_ES
+  et_EE
+  fr_FR
+  hr_HR
+  hu_HU
+  it_IT
+  ja_JP
+  lv_LV
+  nl_NL
+  pl_PL
+  pt_BR
+  pt_PT
+  ru_RU
+  sv_SE
+  zh_CN
+  zh_HK
   )
 foreach (lang_ ${LANGUAGES})
   file (TO_NATIVE_PATH translations/jtdx_${lang_}.ts ts_)

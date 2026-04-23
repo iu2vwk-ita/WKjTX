@@ -3,6 +3,7 @@
 #include "mainwindow.h"
 #include <cinttypes>
 #include <limits>
+#include <memory>
 #include <fftw3.h>
 #include <thread>
 
@@ -66,6 +67,12 @@
 #include "wkjtx/RadioProfileDialog.hpp"
 #include "wkjtx/TimeSync.hpp"
 #include "wkjtx/TimeSyncBadge.hpp"
+#include "wkjtx/QrzUploader.hpp"
+#include "wkjtx/QrzDownloader.hpp"
+#include "wkjtx/UploadQueue.hpp"
+#include "wkjtx/UploadDispatcher.hpp"
+#include "wkjtx/PendingUploadsDialog.hpp"
+#include "wkjtx/AdifImporter.hpp"
 #include <QDir>
 #include <QFileInfo>
 #include "wkjtx/detectors/NewDxccDetector.hpp"
@@ -473,6 +480,34 @@ MainWindow::MainWindow(bool multiple, QSettings * settings, QSharedMemory *shdme
   createAutoCallMenu ();     // WKjTX: "Auto-call..." in File menu + instantiate engine
   createAutoCallBadge ();    // WKjTX: flashing badge in status bar
   createProfileButtons ();   // WKjTX: 3-slot profile quick-switch in menubar corner
+  // v1.2.0: qrz.com upload + unified upload queue with auto/manual mode.
+  {
+    QString const queuePath =
+        QStandardPaths::writableLocation (QStandardPaths::AppLocalDataLocation)
+        + "/upload_queue.json";
+    m_uploadQueue    = new wkjtx::UploadQueue {queuePath, this};
+    m_qrz            = new wkjtx::QrzUploader {this};
+    m_qrzDownloader  = new wkjtx::QrzDownloader {this};
+    m_uploadDispatch = new wkjtx::UploadDispatcher {&m_config, m_uploadQueue,
+                                                    m_qrz, Eqsl, this};
+    connect (m_uploadDispatch, &wkjtx::UploadDispatcher::serviceSucceeded,
+             this, [this] (wkjtx::UploadService s, QString call) {
+                 QString const svc = (s == wkjtx::UploadService::Qrz
+                                        ? QStringLiteral ("QRZ")
+                                        : QStringLiteral ("eQSL"));
+                 writeToALLTXT (svc + ": uploaded " + call);
+                 statusBar ()->showMessage (svc + tr (": uploaded ") + call, 5000);
+             });
+    connect (m_uploadDispatch, &wkjtx::UploadDispatcher::serviceFailed,
+             this, [this] (wkjtx::UploadService s, QString call, QString err) {
+                 QString const svc = (s == wkjtx::UploadService::Qrz
+                                        ? QStringLiteral ("QRZ")
+                                        : QStringLiteral ("eQSL"));
+                 writeToALLTXT (svc + ": FAIL " + call + " - " + err);
+                 statusBar ()->showMessage (svc + tr (": fail ") + call
+                                             + QStringLiteral (" - ") + err, 8000);
+             });
+  }
   m_config.set_jtdxtime (m_jtdxtime);
   ui->decodedTextBrowser->setConfiguration (&m_config);
   ui->decodedTextBrowser2->setConfiguration (&m_config);
@@ -617,6 +652,28 @@ MainWindow::MainWindow(bool multiple, QSettings * settings, QSharedMemory *shdme
           if (send && !m_enableTx) ui->enableTxButton->click ();
         }
     }
+  });
+
+  // v1.2.0: SwitchProfile and EnableTx UDP commands (used by the
+  // WKjTX Companion Stream Deck plugin).
+  connect (m_messageClient, &MessageClient::switch_profile,
+           [this] (qint32 slot_index) {
+      if (!m_config.accept_udp_requests ()) return;
+      if (!m_profileManager) return;
+      if (slot_index < 1 || slot_index > 3) return;
+      if (m_profileManager->activeSlot () == slot_index) return;
+      switchToProfile (slot_index);
+  });
+
+  connect (m_messageClient, &MessageClient::enable_tx,
+           [this] (bool enable) {
+      if (!m_config.accept_udp_requests ()) return;
+      // Click only when the current state mismatches the request so
+      // repeated commands stay idempotent. enableTxButton is a
+      // checkable button; its `isChecked()` reflects the live state.
+      if (ui->enableTxButton->isChecked () != enable) {
+          ui->enableTxButton->click ();
+      }
   });
 
   // Hook up WSPR band hopping
@@ -917,6 +974,11 @@ MainWindow::MainWindow(bool multiple, QSettings * settings, QSharedMemory *shdme
   cqButtonTimer.setSingleShot(true); connect(&cqButtonTimer, &QTimer::timeout, this, &MainWindow::on_pbCallCQ_clicked);
   enableTxButtonTimer.setSingleShot(true); connect(&enableTxButtonTimer, &QTimer::timeout, this, &MainWindow::enableTxButton_off);
   tx73ButtonTimer.setSingleShot(true); connect(&tx73ButtonTimer, &QTimer::timeout, this, &MainWindow::on_pbSend73_clicked);
+  // v1.2.0: fallback timer for Auto-CQ after QSO. Armed in acceptQSO2;
+  // fires ~3.5 s later and force-arms Tx6+Enable TX when the gated
+  // maybeArmAutoCq path never gets a chance (operator logs before
+  // the 73 TX completes, so m_nlasttx never hits 5/6).
+  m_autoCqKickTimer.setSingleShot(true); connect(&m_autoCqKickTimer, &QTimer::timeout, this, &MainWindow::autoCqKickFired);
   logClearDXTimer.setSingleShot(true); connect(&logClearDXTimer, &QTimer::timeout, this, &MainWindow::logClearDX);
   dxbcallTxHaltedClearTimer.setSingleShot(true); connect(&dxbcallTxHaltedClearTimer, &QTimer::timeout, this, &MainWindow::dxbcallTxHaltedClear);
   tuneATU_Timer.setSingleShot(true); connect(&tuneATU_Timer, &QTimer::timeout, this, &MainWindow::stopTuneATU);
@@ -1296,6 +1358,9 @@ void MainWindow::writeSettings()
   m_settings->setValue("Crossband160mHL",m_crossbandHLOptionEnabled);
   m_settings->setValue("QuickCall",m_autoTx);
   m_settings->setValue("AutoSequence",m_autoseq);
+  m_settings->setValue("AutoCQAfterQSO", m_autoCQAfterQSO); // v1.2.0
+  m_settings->setValue("AutoCQDurationMin", m_autoCQDurationMin);
+  m_settings->setValue("AutoCQAcknowledged", m_autoCQAcknowledged);
   m_settings->setValue("SpotText",m_spotText);
   m_settings->setValue("ClearWCallAtLog",ui->cbClearCallsign->isChecked ());
   m_settings->setValue("ClearWGridAtLog",ui->cbClearGrid->isChecked ());
@@ -1599,6 +1664,16 @@ void MainWindow::readSettings()
   if (m_autoseq) { clearDXfields(""); enableTab1TXRB(false); }
   ui->AutoSeqButton->setChecked(m_autoseq);
   setAutoSeqButtonStyle(m_autoseq);
+
+  // v1.2.0: Auto-CQ after QSO toggle restore.
+  m_autoCQAfterQSO = m_settings->value ("AutoCQAfterQSO", false).toBool ();
+  ui->actionAutoCQ_after_QSO->setChecked (m_autoCQAfterQSO);
+  {
+    int d = m_settings->value ("AutoCQDurationMin", 30).toInt ();
+    if (d < 1) d = 1; if (d > 999) d = 999;
+    m_autoCQDurationMin = d;
+  }
+  m_autoCQAcknowledged = m_settings->value ("AutoCQAcknowledged", false).toBool ();
 
   m_spotText=m_settings->value("SpotText","").toString();
   ui->spotLineEdit->setText(m_spotText);
@@ -2245,6 +2320,200 @@ void MainWindow::monitor (bool state)
 
 void MainWindow::on_actionAbout_triggered() { CAboutDlg {this}.exec (); } //Display "About"
 
+// v1.2.0: File → Upload pending QSOs... → open the queue dialog.
+void MainWindow::on_actionUpload_pending_triggered()
+{
+  if (!m_uploadDispatch || !m_uploadQueue) return;
+  wkjtx::PendingUploadsDialog dlg {m_uploadQueue, m_uploadDispatch, this};
+  dlg.exec ();
+}
+
+// v1.2.0: File → Download log from qrz.com... → pull new QSOs.
+void MainWindow::on_actionDownload_qrz_triggered()
+{
+  if (!m_qrzDownloader) return;
+  QString const apiKey = m_config.qrz_api_key ();
+  if (apiKey.isEmpty ()) {
+    JTDXMessageBox::warning_message (this, "",
+        tr ("qrz.com API key not set. Open Settings -> Reporting "
+            "-> qrz.com Logbook to enter it."));
+    return;
+  }
+
+  QDateTime const since = m_config.qrz_last_fetch ();
+  QString const sinceMsg = since.isValid ()
+      ? since.toUTC ().toString (Qt::ISODate)
+      : tr ("beginning of logbook (first sync)");
+  statusBar ()->showMessage (tr ("qrz.com: fetching QSOs since %1...")
+                                  .arg (sinceMsg), 0);
+
+  // The QrzDownloader lives for the whole app, so use single-shot
+  // connects gated on an id to avoid routing the reply to a prior
+  // click. Simplest approach: blockingly connect once per click and
+  // disconnect in the handler.
+  auto * self = this;
+  auto okConn   = std::make_shared<QMetaObject::Connection> ();
+  auto failConn = std::make_shared<QMetaObject::Connection> ();
+
+  *okConn = connect (m_qrzDownloader, &wkjtx::QrzDownloader::downloaded,
+                     this,
+                     [self, okConn, failConn] (QByteArray adif, int count) {
+      self->disconnect (*okConn);
+      self->disconnect (*failConn);
+      if (adif.isEmpty () || count == 0) {
+          self->statusBar ()->showMessage (
+              tr ("qrz.com: no new QSOs since last fetch."), 5000);
+          self->writeToALLTXT ("QRZ FETCH: 0 records");
+          self->m_config.set_qrz_last_fetch (
+              QDateTime::currentDateTimeUtc ());
+          return;
+      }
+
+      QString const dest =
+          self->m_dataDir.absoluteFilePath (QStringLiteral ("wsjtx_log.adi"));
+      QString const src  =
+          self->m_dataDir.absoluteFilePath (QStringLiteral ("qrz_fetch.adi"));
+
+      {
+          QFile tmp {src};
+          if (!tmp.open (QIODevice::WriteOnly | QIODevice::Truncate)) {
+              JTDXMessageBox::critical_message (self, "",
+                  tr ("qrz.com: cannot write temp file:\n%1")
+                      .arg (tmp.errorString ()));
+              return;
+          }
+          tmp.write (adif);
+          tmp.close ();
+      }
+
+      AdifImporter::Stats const st = AdifImporter::run (src, dest);
+      QFile::remove (src);
+      if (!st.ok) {
+          JTDXMessageBox::critical_message (self, "",
+              tr ("qrz.com: ADIF import failed:\n%1").arg (st.errorMessage));
+          return;
+      }
+      QString const msg = tr ("qrz.com FETCH: %1 received, "
+                              "%2 imported, %3 duplicates, %4 malformed")
+                            .arg (st.totalRead).arg (st.imported)
+                            .arg (st.duplicates).arg (st.malformed);
+      JTDXMessageBox::information_message (self, "",
+          tr ("qrz.com download complete."), msg);
+      self->writeToALLTXT ("QRZ FETCH: " + msg);
+      self->statusBar ()->showMessage (msg, 8000);
+      self->m_config.set_qrz_last_fetch (QDateTime::currentDateTimeUtc ());
+  });
+
+  *failConn = connect (m_qrzDownloader, &wkjtx::QrzDownloader::downloadFailed,
+                       this,
+                       [self, okConn, failConn] (QString error) {
+      self->disconnect (*okConn);
+      self->disconnect (*failConn);
+      JTDXMessageBox::critical_message (self, "",
+          tr ("qrz.com download failed:\n%1").arg (error));
+      self->writeToALLTXT ("QRZ FETCH failed: " + error);
+      self->statusBar ()->showMessage (
+          tr ("qrz.com download failed: %1").arg (error), 8000);
+  });
+
+  m_qrzDownloader->setApiKey (apiKey);
+  m_qrzDownloader->fetch (since);
+}
+
+// v1.2.0: AutoSeq menu toggle — on enable, prompt the operator to
+// acknowledge the unattended-TX risk and pick a duration (1..999
+// minutes). On disable, tear down any active auto-CQ window.
+void MainWindow::on_actionAutoCQ_after_QSO_triggered(bool checked)
+{
+  if (checked) {
+    if (!promptAutoCqActivation ()) {
+      // Revert the menu check without re-triggering this slot.
+      QSignalBlocker blocker {ui->actionAutoCQ_after_QSO};
+      ui->actionAutoCQ_after_QSO->setChecked (false);
+      m_autoCQAfterQSO = false;
+      return;
+    }
+    m_autoCQAfterQSO = true;
+  } else {
+    m_autoCQAfterQSO = false;
+    // Cancel any in-flight window.
+    m_autoCQPending = false;
+    m_autoCQActive = false;
+    m_autoCQDeadlineMs = 0;
+    m_autoCqKickTimer.stop ();
+  }
+  writeToALLTXT (QString ("Auto-CQ after QSO: ")
+                 + (m_autoCQAfterQSO
+                      ? QString ("ON (%1 min)").arg (m_autoCQDurationMin)
+                      : QString ("OFF")));
+  statusBar ()->showMessage (m_autoCQAfterQSO
+      ? tr ("Auto-CQ after QSO: ON (%1 min)").arg (m_autoCQDurationMin)
+      : tr ("Auto-CQ after QSO: OFF"),
+      3000);
+}
+
+// v1.2.0: 2-step dialog flow used on every toggle-on. The warning
+// panel shows once per install (first-enable). The duration prompt
+// always runs so the operator consciously confirms the window each
+// session. Returns false to cancel the toggle.
+bool MainWindow::promptAutoCqActivation ()
+{
+  if (!m_autoCQAcknowledged) {
+    auto const resp = JTDXMessageBox::warning_message (
+        this,
+        tr ("Auto-CQ after QSO — unattended transmit risk"),
+        tr ("You are about to enable automatic repeated CQ transmission."),
+        tr ("With Auto-CQ after QSO enabled, WKjTX will:\n"
+            "\n"
+            "  - Automatically re-arm the Tx6 CQ message after every\n"
+            "    logged QSO.\n"
+            "  - Keep calling CQ every cycle, for the number of\n"
+            "    minutes you select (1..999), even when nobody\n"
+            "    replies.\n"
+            "\n"
+            "This means the station will transmit without an\n"
+            "operator present.\n"
+            "\n"
+            "You are responsible for:\n"
+            "  - Staying within your licence privileges (power,\n"
+            "    band, mode, duty cycle).\n"
+            "  - NEVER leaving an auto-calling station connected to\n"
+            "    a linear amplifier, a timer-switched power strip,\n"
+            "    or an antenna that can catch fire on long TX.\n"
+            "  - Monitoring the station regularly for runaway\n"
+            "    behaviour, ALC / SWR alarms, or radio faults.\n"
+            "  - Halting TX (big red button in WKjTX, or the same\n"
+            "    key on your Stream Deck via the Companion plugin)\n"
+            "    the instant anything looks wrong.\n"
+            "\n"
+            "Click OK only if you have read and accept these\n"
+            "responsibilities. Click Cancel to abort."),
+        /*detail*/ QString {},
+        QMessageBox::Ok | QMessageBox::Cancel,
+        QMessageBox::Cancel);
+    if (resp != QMessageBox::Ok) return false;
+    m_autoCQAcknowledged = true;
+    m_settings->beginGroup ("Common");
+    m_settings->setValue ("AutoCQAcknowledged", true);
+    m_settings->endGroup ();
+  }
+
+  bool ok = false;
+  int const minutes = QInputDialog::getInt (
+      this,
+      tr ("Auto-CQ duration"),
+      tr ("Keep calling CQ for how many minutes after each QSO?\n"
+          "(range 1..999 — the window resets on every logged QSO)"),
+      /*value*/ m_autoCQDurationMin,
+      /*min*/ 1, /*max*/ 999, /*step*/ 1, &ok);
+  if (!ok) return false;
+  m_autoCQDurationMin = minutes;
+  m_settings->beginGroup ("Common");
+  m_settings->setValue ("AutoCQDurationMin", m_autoCQDurationMin);
+  m_settings->endGroup ();
+  return true;
+}
+
 void MainWindow::on_enableTxButton_clicked (bool checked)
 {
   if(m_enableTx && !checked && m_curMsgTx.startsWith(m_hisCall+" ")) m_lasthint=true;
@@ -2758,6 +3027,36 @@ void MainWindow::subProcessError (QProcess * process, QProcess::ProcessError)
 void MainWindow::closeEvent(QCloseEvent * e)
 {
   m_valid = false;              // suppresses subprocess errors
+  // v1.2.0: if qrz.com / eQSL uploads are queued, offer to flush them
+  // before the app exits. "Later" leaves the queue on disk for the
+  // next run; "Discard" wipes it. Blocks up to 30 s while flushing.
+  if (m_uploadDispatch && m_uploadDispatch->pendingCount () > 0) {
+      int const n = m_uploadDispatch->pendingCount ();
+      auto const choice = QMessageBox::question (
+          this,
+          tr ("Pending QSO uploads"),
+          tr ("%n QSO are queued for qrz.com / eQSL upload.\n"
+              "Upload them before closing?", "", n),
+          QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel,
+          QMessageBox::Yes);
+      if (choice == QMessageBox::Yes) {
+          QEventLoop loop;
+          QTimer::singleShot (30000, &loop, &QEventLoop::quit);
+          connect (m_uploadDispatch, &wkjtx::UploadDispatcher::allFlushed,
+                   &loop, &QEventLoop::quit);
+          m_uploadDispatch->flushPending ();
+          loop.exec ();
+      } else if (choice == QMessageBox::Cancel) {
+          if (QMessageBox::question (this,
+                  tr ("Discard queued uploads"),
+                  tr ("Permanently discard the %n queued QSO upload(s)?", "", n),
+                  QMessageBox::Yes | QMessageBox::No,
+                  QMessageBox::No) == QMessageBox::Yes) {
+              m_uploadDispatch->clearPending ();
+          }
+      }
+      // QMessageBox::No → leave queue intact on disk for next run.
+  }
   if(m_config.clear_DX_exit())
     {
       clearDX ("");
@@ -2831,8 +3130,11 @@ void MainWindow::on_pbSpotDXCall_clicked ()
 }
 
 void MainWindow::msgBox(QString t) { msgBox0.setText(t); msgBox0.translate_buttons(); msgBox0.exec(); }
-void MainWindow::on_actionJTDX_Web_Site_triggered() { m_manual.display_html_url (QUrl {PROJECT_MANUAL_DIRECTORY_URL}, PROJECT_MANUAL); }
-void MainWindow::on_actionJTDX_Forum_triggered() { m_manual.display_html_url (QUrl {"https://github.com/iu2vwk-ita/WKjTX/discussions"}, ""); }
+// WKjTX v1.2.0: open directly via QDesktopServices so DisplayManual's
+// versioned-HTML fallback (which appends "-<version>.html" when the
+// HEAD request 404s) can't mangle these plain landing URLs.
+void MainWindow::on_actionJTDX_Web_Site_triggered() { QDesktopServices::openUrl (QUrl {"https://iu2vwk.com/"}); }
+void MainWindow::on_actionJTDX_Forum_triggered()    { QDesktopServices::openUrl (QUrl {"https://github.com/iu2vwk-ita/WKjTX/"}); }
 
 /*Display local copy of manual
 void MainWindow::on_actionLocal_User_Guide_triggered()
@@ -4514,6 +4816,21 @@ void MainWindow::guiUpdate()
   double t2p=fmod(tsec,2.0*m_TRperiod);
   m_nseq = fmod(double(nsec),m_TRperiod);
 
+  // v1.2.0: once per guiUpdate tick, check whether we should arm the
+  // CQ message now that the previously logged QSO's 73 has gone out.
+  // Edge-detect: if we just finished transmitting a 73 (nlasttx=5),
+  // that's the equivalent of "QSO ended" for operators who don't use
+  // the Prompt-to-log / Auto-log workflows (so acceptQSO2 never
+  // fires). Arm the pending flag here too.
+  if (m_autoCQAfterQSO && m_autoCQLastTransmitting && !m_transmitting
+      && m_nlasttx == 5 && !m_houndMode && m_mode != "WSPR-2"
+      && !m_autoCQActive && !m_autoCQPending) {
+      m_autoCQPending = true;
+      writeToALLTXT ("Auto-CQ after QSO: pending (edge-detect: 73 TX finished)");
+  }
+  m_autoCQLastTransmitting = m_transmitting;
+  maybeArmAutoCq ();
+
   if(m_mode.left(4)=="WSPR") {
     if(m_nseq==0 and m_ntr==0) {                   //Decide whether to Tx or Rx
       m_tuneup=false;                              //This is not an ATU tuneup
@@ -4950,6 +5267,9 @@ void MainWindow::guiUpdate()
         && m_idleMinutes >= m_config.watchdog ()) {
       txwatchdog (true);       // switch off Enable Tx button
     }
+    // v1.2.0: Auto-CQ sustained window — after a logged QSO, keep
+    // calling CQ across unanswered cycles until the deadline.
+    sustainAutoCq ();
     if(m_tune && m_config.tunetimer() && !m_tuneup) { //shall not count at WSPR band hopping
       QString remtime;
       remtime = QString::asprintf("%.0f s",StopTuneTimer.remainingTime()/1000.0);
@@ -5064,7 +5384,11 @@ void MainWindow::set_scheduler(QString const& setto,bool mixed)
   m_wideGraph->setRxBand (m_config.bands ()->find (frq));
 }
 
-void MainWindow::haltTx(QString reason) { m_haltTxWritten=true; writeHaltTxEvent(reason); on_stopTxButton_clicked(); }
+void MainWindow::haltTx(QString reason) {
+  m_haltTxWritten=true;
+  writeHaltTxEvent(reason);
+  on_stopTxButton_clicked();
+}
 
 void MainWindow::haltTxTuneTimer()
 {
@@ -6449,8 +6773,24 @@ void MainWindow::acceptQSO2(QDateTime const& QSO_date_off, QString const& call, 
     if(-1 == sock.writeDatagram (myadif2, QHostAddress {m_config.udp2_server_name()}, m_config.udp2_server_port()))
       { JTDXMessageBox::warning_message (this, "", tr ("Error sending QSO ADIF data to secondary UDP server"), tr ("Write returned \"%1\"").arg (sock.errorString ())); }
   }
-  if (m_config.send_to_eqsl())
-      Eqsl->upload(m_config.eqsl_username(),m_config.eqsl_passwd(),m_config.eqsl_nickname(),call,mode,QSO_date_on,rpt_sent,m_config.bands ()->find (dial_freq),eqslcomments);
+  // v1.2.0: route uploads (qrz.com + eQSL) through the UploadDispatcher
+  // so the Auto / Manual mode toggle and the retry queue take effect.
+  // The dispatcher checks Configuration flags internally and enqueues
+  // the entry regardless of the chosen mode, so manual uploads still
+  // end up in the persistent queue for review later.
+  if (m_uploadDispatch) {
+      m_uploadDispatch->onQsoAccepted (QString::fromUtf8 (myadif2),
+                                       call,
+                                       m_config.bands ()->find (dial_freq),
+                                       mode,
+                                       QSO_date_on);
+  } else if (m_config.send_to_eqsl ()) {
+      // Fallback — should not trigger in normal operation.
+      Eqsl->upload (m_config.eqsl_username (), m_config.eqsl_passwd (),
+                    m_config.eqsl_nickname (), call, mode, QSO_date_on,
+                    rpt_sent, m_config.bands ()->find (dial_freq),
+                    eqslcomments);
+  }
   ui->dxCallEntry->setStyleSheet(QString("QLineEdit {color: %1; background: %2}").arg(Radio::convert_dark("#000000",m_useDarkStyle),Radio::convert_dark("#7fff7f",m_useDarkStyle)));
   m_lastloggedcall=call;
   m_lastloggedtime=m_jtdxtime->currentDateTimeUtc2();
@@ -6476,6 +6816,171 @@ void MainWindow::acceptQSO2(QDateTime const& QSO_date_off, QString const& call, 
     }
   }
   if (m_houndMode && !m_hisCall.isEmpty()) { clearDX (" cleared: QSO logged in DXpedition mode"); ui->dxCallEntry->setStyleSheet(QString("QLineEdit {color: %1; background: %2}").arg(Radio::convert_dark("#000000",m_useDarkStyle),Radio::convert_dark("#ffffff",m_useDarkStyle))); }
+
+  // v1.2.0: Auto-CQ after QSO — arm Tx6 (CQ) automatically once the
+  // current QSO cycle finishes. Pre-conditions:
+  //   * m_autoCQAfterQSO     — user toggle (menu AutoSeq → Auto-CQ).
+  //   * !m_houndMode         — DXpedition/Hound mode has no CQ path.
+  //   * m_mode != "WSPR-2"   — WSPR has no QSO semantics.
+  //   * m_enableTx            — user didn't click Halt TX during the
+  //                             QSO. If TX was halted mid-sequence
+  //                             m_enableTx is already false, and we
+  //                             honour that — Halt TX stays a hard
+  //                             stop. User must re-enable manually.
+  //
+  // IMPORTANT: do NOT call on_txb6_clicked() here. acceptQSO2 can
+  // fire while the final 73 is still queued or actively being
+  // transmitted (the auto-log-at-73 setting commits the log when
+  // SIGNOFF is reached, which may precede the physical TX). Arming
+  // Tx6 immediately would overwrite m_ntx/m_nlasttx and the 73 would
+  // get dropped. Instead, defer to guiUpdate's check against
+  // m_transmitting + m_nlasttx; see maybeArmAutoCq().
+  //
+  // We intentionally DO NOT check m_enableTx here — the sequencer
+  // may already have parked TX off after the 73, and that's exactly
+  // the state in which we want to arm. Halt-TX-hard-stop is
+  // enforced in on_stopTxButton_clicked() by clearing the flag.
+  if (m_autoCQAfterQSO
+      && !m_houndMode
+      && m_mode != "WSPR-2") {
+      m_autoCQPending = true;
+      writeToALLTXT (QString ("Auto-CQ after QSO: pending (enableTx=%1 transmitting=%2 nlasttx=%3)")
+                         .arg (m_enableTx ? "on" : "off")
+                         .arg (m_transmitting ? "yes" : "no")
+                         .arg (m_nlasttx));
+      // Fallback: if the natural sequencer path in maybeArmAutoCq()
+      // can't fire (because nlasttx never reaches 5/6 — happens when
+      // the operator uses Prompt-to-log and clicks Log before the
+      // final 73 TX even starts), kick the arm from a timer. Armed
+      // a bit longer than a single FT8 TX slot so we don't fight an
+      // in-progress 73.
+      m_autoCqKickTimer.start (3500);
+  }
+}
+
+void MainWindow::forceArmAutoCq ()
+{
+  // Shared arm path — called by maybeArmAutoCq (natural) and by
+  // autoCqKickFired (timed fallback). Does the equivalent of clicking
+  // the Tx6 button and the Enable Tx button on the UI, then opens the
+  // active-window deadline that sustainAutoCq maintains afterwards.
+  on_txb6_clicked ();
+  if (!m_enableTx && ui->enableTxButton->isEnabled ()) {
+    ui->enableTxButton->click ();
+  }
+  m_autoCQPending = false;
+  // Each arm resets the deadline to a full duration from now — so
+  // back-to-back QSOs keep the station calling CQ indefinitely, as
+  // long as each logged QSO extends the window by another N minutes.
+  m_autoCQActive = true;
+  m_autoCQDeadlineMs = QDateTime::currentMSecsSinceEpoch ()
+                     + qint64 (m_autoCQDurationMin) * 60 * 1000;
+  statusBar ()->showMessage (
+      tr ("Auto-CQ re-armed after QSO (%1 min window)")
+          .arg (m_autoCQDurationMin),
+      4000);
+}
+
+void MainWindow::maybeArmAutoCq ()
+{
+  if (!m_autoCQPending) return;
+  // Only bail permanently if the user disabled the toggle between
+  // log-in and now. DO NOT bail on !m_enableTx — the sequencer
+  // naturally disables TX after the final 73, and that's exactly
+  // the state in which we want to arm CQ and re-enable TX. The
+  // actual "user halted TX" case is handled in
+  // on_stopTxButton_clicked() which clears m_autoCQPending directly.
+  if (!m_autoCQAfterQSO) {
+      m_autoCQPending = false;
+      m_autoCqKickTimer.stop ();
+      return;
+  }
+  // Wait until we're not actively transmitting (so we don't cut off
+  // the 73) AND the sequencer has already advanced past 73. The
+  // sequencer moves m_nlasttx to 6 when it naturally rolls over into
+  // CQ; if it's still 5 (just sent 73) we give it one more tick to
+  // settle. If the sequencer decided to park after 73 without re-
+  // arming Tx6 (auto-seq stopped because nobody's calling), we arm
+  // it ourselves here.
+  if (m_transmitting) return;
+  if (g_iptt == 1) return;          // PTT still asserted mid-slot
+  if (m_txNext) return;              // Next TX already scheduled
+  // Wait for nlasttx to reach 5 at least — proves the 73 was sent.
+  // If it's still 4 (RR73) or earlier the sequencer isn't done.
+  // The fallback m_autoCqKickTimer will force the arm a few seconds
+  // after the log event if we never clear this gate.
+  if (m_nlasttx != 5 && m_nlasttx != 6) return;
+  m_autoCqKickTimer.stop ();         // natural path won the race
+  forceArmAutoCq ();
+  writeToALLTXT (QString ("Auto-CQ after QSO: re-armed Tx6 CQ via sequencer (window %1 min, enableTx=%2 nlasttx=%3)")
+                     .arg (m_autoCQDurationMin)
+                     .arg (m_enableTx ? "on" : "off")
+                     .arg (m_nlasttx));
+}
+
+void MainWindow::autoCqKickFired ()
+{
+  // Timed fallback: acceptQSO2 armed this timer ~3.5 s ago. If the
+  // natural path in maybeArmAutoCq already fired, m_autoCQPending is
+  // now false and we bail. Otherwise arm unconditionally.
+  if (!m_autoCQPending) return;
+  if (!m_autoCQAfterQSO) { m_autoCQPending = false; return; }
+  if (m_houndMode)      { m_autoCQPending = false; return; }
+  if (m_mode == "WSPR-2") { m_autoCQPending = false; return; }
+  // If TX is still in progress (a long slow-mode 73, or PTT still
+  // asserted) hold off one more second — don't cut the 73 off mid
+  // air.
+  if (m_transmitting || g_iptt == 1 || m_txNext) {
+    m_autoCqKickTimer.start (1000);
+    return;
+  }
+  forceArmAutoCq ();
+  writeToALLTXT (QString ("Auto-CQ after QSO: re-armed Tx6 CQ via kick-timer (window %1 min, enableTx=%2 nlasttx=%3)")
+                     .arg (m_autoCQDurationMin)
+                     .arg (m_enableTx ? "on" : "off")
+                     .arg (m_nlasttx));
+}
+
+// v1.2.0: called once per second from guiUpdate. Keeps CQ running
+// across unanswered cycles until the window deadline hits.
+void MainWindow::sustainAutoCq ()
+{
+  if (!m_autoCQActive) return;
+  if (!m_autoCQAfterQSO) { m_autoCQActive = false; return; }
+  qint64 const now = QDateTime::currentMSecsSinceEpoch ();
+  if (now >= m_autoCQDeadlineMs) {
+    // Window expired — stop. We do NOT call haltTx here; letting the
+    // sequencer park itself naturally is friendlier (no surprise
+    // mid-air truncation). The user must re-enable TX manually when
+    // ready to come back on air.
+    m_autoCQActive = false;
+    writeToALLTXT ("Auto-CQ after QSO: window expired, stopping");
+    statusBar ()->showMessage (tr ("Auto-CQ window expired"), 5000);
+    return;
+  }
+  // Don't interfere with in-progress QSOs or with a currently active
+  // TX slot.
+  if (!m_hisCall.isEmpty ()) return;
+  if (m_transmitting) return;
+  if (g_iptt == 1) return;
+  if (m_txNext) return;
+  // Sequencer may have turned TX off after an unanswered CQ
+  // (JTDX's "no stuck CQ loops" behaviour) or may still have it on
+  // but armed at the wrong message — re-normalise both.
+  bool didSomething = false;
+  if (m_ntx != 6 || m_QSOProgress != CALLING) {
+    on_txb6_clicked ();
+    didSomething = true;
+  }
+  if (!m_enableTx && ui->enableTxButton->isEnabled ()) {
+    ui->enableTxButton->click ();
+    didSomething = true;
+  }
+  if (didSomething) {
+    qint64 const remMs = m_autoCQDeadlineMs - now;
+    writeToALLTXT (QString ("Auto-CQ after QSO: sustained CQ (re-armed, %1 s left)")
+                       .arg (remMs / 1000));
+  }
 }
 
 void MainWindow::on_actionJT9_triggered()
@@ -7294,6 +7799,12 @@ void MainWindow::on_stopTxButton_clicked()                    //Stop Tx
   if (m_enableTx and !m_tuneup) enableTx_mode (false);
   m_btxok=false;
   m_nlasttx=0;
+  // v1.2.0: Halt TX is a hard stop. Clear any auto-CQ window so
+  // sustainAutoCq() doesn't immediately turn TX back on, and cancel
+  // the pending kick-timer so it doesn't force-arm after the halt.
+  m_autoCQActive = false;
+  m_autoCQPending = false;
+  m_autoCqKickTimer.stop ();
 //  if(m_autofilter && m_autoseq && m_filter) autoFilter (false);
   if(m_filter && (m_FilterState==1 || m_FilterState==2)) autoFilter (false);
   if(!m_transmitting && g_iptt==1) m_haltTrans=true;

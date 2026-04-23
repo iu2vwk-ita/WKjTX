@@ -231,6 +231,31 @@ void MessageClient::impl::parse_message (QByteArray const& msg)
               }
               break;
 
+            // v1.2.0 — WKjTX extensions consumed by WKjTX Companion
+            // (Stream Deck plugin). Both are IN-direction commands
+            // that mutate local UI state on receipt.
+            case NetworkMessage::SwitchProfile:
+              {
+                qint32 slot_index {0};
+                in >> slot_index;
+                if (check_status (in) != Fail)
+                  {
+                    Q_EMIT self_->switch_profile (slot_index);
+                  }
+              }
+              break;
+
+            case NetworkMessage::EnableTx:
+              {
+                bool enable {false};
+                in >> enable;
+                if (check_status (in) != Fail)
+                  {
+                    Q_EMIT self_->enable_tx (enable);
+                  }
+              }
+              break;
+
             default:
               // Ignore
               break;

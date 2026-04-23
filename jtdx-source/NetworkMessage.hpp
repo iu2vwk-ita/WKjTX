@@ -354,8 +354,30 @@
  *      where  'true'  value  shall  correspond  to  'TX 00/30' second 
  *      in FT8 mode and 'TX even' minute in JT65/JT9/T10 modes.
  *
- *      If the "Send" flag is set  then  CQ message  will be generated 
+ *      If the "Send" flag is set  then  CQ message  will be generated
  *      and Enable Tx button will be switched on.
+ *
+ *
+ * SwitchProfile In        52                     quint32
+ *                         Id (unique key)        utf8
+ *                         SlotIndex              qint32
+ *
+ *      WKjTX v1.2.0.  Switch the active radio profile to slot 1..3.
+ *      SlotIndex 1 is the base configuration; 2 and 3 are overlays
+ *      stored under %LOCALAPPDATA%/WKjTX/profiles/slot<N>.ini. Values
+ *      outside 1..3 are ignored. Triggers the same safe-switch path
+ *      as ProfileButton left-click: CAT close, re-open, audio re-init.
+ *
+ *
+ * EnableTx      In        53                     quint32
+ *                         Id (unique key)        utf8
+ *                         Enable                 bool
+ *
+ *      WKjTX v1.2.0.  Request the Enable Tx button state. If the
+ *      current state already matches Enable the request is a no-op;
+ *      otherwise the button is clicked once so m_enableTx updates.
+ *      Use false to stop TX politely (HaltTx type 8 is the immediate
+ *      variant).
  */
 
 #include <QDataStream>
@@ -423,6 +445,8 @@ namespace NetworkMessage
       reserved49,
       SetTxDeltaFreq,
       TriggerCQ,
+      SwitchProfile,            // WKjTX v1.2.0 (52): Id, SlotIndex (qint32)
+      EnableTx,                 // WKjTX v1.2.0 (53): Id, Enable (bool)
       maximum_message_type_     // ONLY add new message types
                                 // immediately before here
     };

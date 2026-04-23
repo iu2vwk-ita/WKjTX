@@ -4619,6 +4619,9 @@ list. The list can be maintained in Settings (F2).</string>
     <addaction name="actionOpen_wsjtx_log_adi"/>
     <addaction name="actionOpen_log_directory"/>
     <addaction name="separator"/>
+    <addaction name="actionUpload_pending"/>
+    <addaction name="actionDownload_qrz"/>
+    <addaction name="separator"/>
     <addaction name="actionSettings"/>
     <addaction name="separator"/>
     <addaction name="actionExit"/>
@@ -4857,6 +4860,8 @@ list. The list can be maintained in Settings (F2).</string>
     <addaction name="separator"/>
     <addaction name="actionSingleShot"/>
     <addaction name="menuAuto_RX_frequency_Filter"/>
+    <addaction name="separator"/>
+    <addaction name="actionAutoCQ_after_QSO"/>
    </widget>
    <widget class="QMenu" name="menuDXpedition">
     <property name="title">
@@ -5318,6 +5323,36 @@ list. The list can be maintained in Settings (F2).</string>
    </property>
    <property name="shortcut">
     <string>F2</string>
+   </property>
+  </action>
+  <action name="actionUpload_pending">
+   <property name="text">
+    <string>Upload pending QSOs...</string>
+   </property>
+   <property name="toolTip">
+    <string>Review queued qrz.com / eQSL uploads and retry or remove them.</string>
+   </property>
+  </action>
+  <action name="actionDownload_qrz">
+   <property name="text">
+    <string>Download log from qrz.com...</string>
+   </property>
+   <property name="toolTip">
+    <string>Pull new QSOs from qrz.com Logbook into the internal log (incremental since last fetch; skips duplicates on CALL + QSO_DATE + BAND + MODE).</string>
+   </property>
+  </action>
+  <action name="actionAutoCQ_after_QSO">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Auto-CQ after QSO</string>
+   </property>
+   <property name="toolTip">
+    <string>When enabled, WKjTX re-arms the Tx6 CQ message and re-enables TX automatically after every logged QSO, so the station resumes calling CQ without manual intervention. Clicking Halt TX always suspends this until TX is re-enabled manually.</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+Q</string>
    </property>
   </action>
   <action name="actionJTDX_Forum">

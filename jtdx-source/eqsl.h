@@ -1,13 +1,12 @@
 // This source code file was last time modified by Arvo ES1JA on 20181229
+// v1.2.0 (WKjTX): signal-based success/failure reporting so the
+// UploadDispatcher can queue retries.
 
 #ifndef EQSL_H
 #define EQSL_H
 
 #include <QObject>
 #include <QString>
-//#include <QList>
-//#include <QHash>
-//#include <QQueue>
 #include "Radio.hpp"
 
 
@@ -27,8 +26,9 @@ public:
                   , QString const& rpt_sent, QString const& band
                   , QString const& eqslcomments);
 
-//signals:
-//    void uploadStatus(QString);
+signals:
+    void uploaded     (QString callsign);
+    void uploadFailed (QString callsign, QString error);
 
 public slots:
     void networkReply(QNetworkReply *);
@@ -40,6 +40,10 @@ private:
     QTimer *uploadTimer;
     QNetworkReply *reply;
     bool m_in_progress;
+    // v1.2.0: remember the callsign whose upload is in flight so we can
+    // route the success / failure signal to the right entry in the
+    // UploadDispatcher.
+    QString m_pending_call;
 };
 
 #endif // EQSL_H

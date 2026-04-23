@@ -1,4 +1,6 @@
 // This source code file was last time modified by Arvo ES1JA on 20181229
+// v1.2.0 (WKjTX): added signal-based success/failure reporting so the
+// UploadDispatcher can queue retries on network error or server reject.
 
 #include "wsprnet.h"
 
@@ -43,6 +45,7 @@ void EQSL::upload(QString const& eqsl_username, QString const& eqsl_passwd, QStr
         reply->abort();
         m_in_progress = false;
     }
+    m_pending_call = call;
     myadif="<ADIF_VER:5>2.1.9";
     myadif+="<EQSL_USER:" + QString::number(eqsl_username.length()) + ">" + eqsl_username;
     myadif+="<EQSL_PSWD:" + QString::number(eqsl_passwd.length()) + ">" + eqsl_passwd;
@@ -60,22 +63,65 @@ void EQSL::upload(QString const& eqsl_username, QString const& eqsl_passwd, QStr
     uploadTimer->start(1);
 }
 
-void EQSL::networkReply(QNetworkReply *reply)
+void EQSL::networkReply(QNetworkReply *incoming)
 {
-    if (QNetworkReply::NoError != reply->error ()) {
-      
-      printf ("eqsl upload error:%d\n",reply->error ());
+    // The QNetworkAccessManager is shared with other components
+    // (QrzUploader, DataUpdater, etc.). Filter to the reply we're
+    // actually tracking, otherwise we'd wipe m_in_progress on somebody
+    // else's request.
+    if (incoming != this->reply) {
+        return;
+    }
+
+    QString const call = m_pending_call;
+    bool const had_error = (QNetworkReply::NoError != incoming->error ());
+    QString body;
+    if (!had_error) {
+        body = QString::fromUtf8 (incoming->readAll ());
+    }
+
+    if (had_error) {
+      printf ("eqsl upload error:%d\n", incoming->error ());
+      emit uploadFailed (call,
+          QStringLiteral ("rete: %1").arg (incoming->errorString ()));
     }
     else {
-      QString serverResponse = reply->readAll();
-      
-//      printf("eqsl upload result:%s\n",serverResponse.toStdString().c_str());
+      // eQSL returns HTML. Success indicators the server puts in the
+      // body: "Result: 1 records added" or "QSL Record(s) uploaded"
+      // or a line starting with "Result:" followed by a success
+      // phrase. Failure surfaces as "Error:" / "Warning:" /
+      // "Result: 0 records added" plus a human-readable reason.
+      QString const lower = body.toLower ();
+      bool const ok =
+          (lower.contains (QLatin1String ("result:"))
+              && lower.contains (QLatin1String ("records added"))
+              && !lower.contains (QLatin1String ("result: 0 records added")))
+       || lower.contains (QLatin1String ("record(s) uploaded"))
+       || lower.contains (QLatin1String ("qsl record(s)"));
+      if (ok) {
+        emit uploaded (call);
+      } else {
+        // Try to extract a short reason ("Error: ...", up to end of line).
+        QString reason;
+        int const errIdx = lower.indexOf (QLatin1String ("error:"));
+        if (errIdx >= 0) {
+            int const eol = body.indexOf (QLatin1Char ('\n'), errIdx);
+            reason = body.mid (errIdx,
+                               eol > 0 ? eol - errIdx : 200).trimmed ();
+        } else {
+            reason = body.left (160).simplified ();
+        }
+        if (reason.isEmpty ()) reason = QStringLiteral ("risposta eQSL non riconosciuta");
+        emit uploadFailed (call,
+            QStringLiteral ("eqsl.cc: %1").arg (reason));
+      }
     }
 
-
     // delete request object instance on return to the event loop otherwise it is leaked
-    reply->deleteLater ();
+    incoming->deleteLater ();
     m_in_progress = false;
+    this->reply = nullptr;
+    m_pending_call.clear ();
 }
 
 void EQSL::work()

@@ -37,6 +37,14 @@ set (WKJTX_SOURCES
   LogRouter.hpp
   QrzUploader.cpp
   QrzUploader.hpp
+  QrzDownloader.cpp
+  QrzDownloader.hpp
+  UploadQueue.cpp
+  UploadQueue.hpp
+  UploadDispatcher.cpp
+  UploadDispatcher.hpp
+  PendingUploadsDialog.cpp
+  PendingUploadsDialog.hpp
   ThemeManager.cpp
   ThemeManager.hpp
   AutoCallSettingsDialog.cpp

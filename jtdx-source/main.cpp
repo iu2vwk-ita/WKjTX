@@ -307,10 +307,10 @@ int main(int argc, char *argv[])
               resources_OK = a.installTranslator (&translator_from_resources);
           } 
 
-          // WKjTX 1.0: the bundled resources ship English only. Every
-          // other language is loaded at runtime from a user-managed
-          // translations/ folder so third-party translations can be
-          // added without rebuilding. Search order:
+          // WKjTX 1.1.3: the bundled resources now ship all 19
+          // JTDX-inherited languages (see CMakeLists.txt LANGUAGES).
+          // The file-based loader below remains as an override /
+          // escape hatch for user-supplied translations. Search order:
           //   1. <applicationDirPath>/translations/wkjtx_<locale>.qm
           //   2. <applicationDirPath>/translations/jtdx_<locale>.qm
           //      (legacy name — JTDX .qm files dropped in as-is still
