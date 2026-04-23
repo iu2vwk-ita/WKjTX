@@ -285,6 +285,10 @@ private slots:
   void on_rrrCheckBox_stateChanged(int arg1);
   void on_rrr1CheckBox_stateChanged(int arg1);
   void set_ntx(int n);
+  // v1.2.0: per-tick check from guiUpdate() that arms Tx6 once the
+  // final 73 TX of a logged QSO has completed. Gated behind
+  // m_autoCQPending which acceptQSO2 sets.
+  void maybeArmAutoCq();
   void on_txb2_clicked();
   void on_txb3_clicked();
   void on_txb4_clicked();
@@ -717,6 +721,10 @@ private:
   wkjtx::UploadDispatcher * m_uploadDispatch {nullptr};
   // v1.2.0: state for the "Auto-CQ after QSO" user toggle.
   bool m_autoCQAfterQSO {false};
+  // v1.2.0: set by acceptQSO2 when the auto-CQ toggle is on; cleared
+  // by the periodic re-arm check in guiUpdate once TX of the final
+  // 73/RR73 has completed so we never pre-empt the 73 with a CQ.
+  bool m_autoCQPending {false};
 
   QTimer m_guiTimer;
   QTimer ptt1Timer;                 //StartTx delay

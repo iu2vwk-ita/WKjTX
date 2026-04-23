@@ -4717,6 +4717,10 @@ void MainWindow::guiUpdate()
   double t2p=fmod(tsec,2.0*m_TRperiod);
   m_nseq = fmod(double(nsec),m_TRperiod);
 
+  // v1.2.0: once per guiUpdate tick, check whether we should arm the
+  // CQ message now that the previously logged QSO's 73 has gone out.
+  maybeArmAutoCq ();
+
   if(m_mode.left(4)=="WSPR") {
     if(m_nseq==0 and m_ntr==0) {                   //Decide whether to Tx or Rx
       m_tuneup=false;                              //This is not an ATU tuneup
@@ -6696,9 +6700,8 @@ void MainWindow::acceptQSO2(QDateTime const& QSO_date_off, QString const& call, 
   }
   if (m_houndMode && !m_hisCall.isEmpty()) { clearDX (" cleared: QSO logged in DXpedition mode"); ui->dxCallEntry->setStyleSheet(QString("QLineEdit {color: %1; background: %2}").arg(Radio::convert_dark("#000000",m_useDarkStyle),Radio::convert_dark("#ffffff",m_useDarkStyle))); }
 
-  // v1.2.0: Auto-CQ after QSO — if the user enabled the toggle, re-arm
-  // Tx6 (CQ) and keep TX enabled so the station keeps calling.
-  // Gates:
+  // v1.2.0: Auto-CQ after QSO — arm Tx6 (CQ) automatically once the
+  // current QSO cycle finishes. Pre-conditions:
   //   * m_autoCQAfterQSO     — user toggle (menu AutoSeq → Auto-CQ).
   //   * !m_houndMode         — DXpedition/Hound mode has no CQ path.
   //   * m_mode != "WSPR-2"   — WSPR has no QSO semantics.
@@ -6707,14 +6710,49 @@ void MainWindow::acceptQSO2(QDateTime const& QSO_date_off, QString const& call, 
   //                             m_enableTx is already false, and we
   //                             honour that — Halt TX stays a hard
   //                             stop. User must re-enable manually.
+  //
+  // IMPORTANT: do NOT call on_txb6_clicked() here. acceptQSO2 can
+  // fire while the final 73 is still queued or actively being
+  // transmitted (the auto-log-at-73 setting commits the log when
+  // SIGNOFF is reached, which may precede the physical TX). Arming
+  // Tx6 immediately would overwrite m_ntx/m_nlasttx and the 73 would
+  // get dropped. Instead, defer to guiUpdate's check against
+  // m_transmitting + m_nlasttx; see maybeArmAutoCq().
   if (m_autoCQAfterQSO
       && !m_houndMode
       && m_mode != "WSPR-2"
       && m_enableTx) {
-      on_txb6_clicked ();
-      writeToALLTXT ("Auto-CQ after QSO: re-armed Tx6 CQ");
-      statusBar ()->showMessage (tr ("Auto-CQ re-armed after QSO"), 4000);
+      m_autoCQPending = true;
+      writeToALLTXT ("Auto-CQ after QSO: armed (deferred until 73 TX done)");
   }
+}
+
+void MainWindow::maybeArmAutoCq ()
+{
+  if (!m_autoCQPending) return;
+  // Bail if the user halted TX or disabled the toggle between log-in
+  // and now — don't keep a stale pending state around forever.
+  if (!m_enableTx || !m_autoCQAfterQSO) {
+      m_autoCQPending = false;
+      return;
+  }
+  // Wait until we're not actively transmitting (so we don't cut off
+  // the 73) AND the sequencer has already advanced past 73. The
+  // sequencer moves m_nlasttx to 6 when it naturally rolls over into
+  // CQ; if it's still 5 (just sent 73) we give it one more tick to
+  // settle. If the sequencer decided to park after 73 without re-
+  // arming Tx6 (auto-seq stopped because nobody's calling), we arm
+  // it ourselves here.
+  if (m_transmitting) return;
+  if (g_iptt == 1) return;          // PTT still asserted mid-slot
+  if (m_txNext) return;              // Next TX already scheduled
+  // Wait for nlasttx to reach 5 at least — proves the 73 was sent.
+  // If it's still 4 (RR73) or earlier the sequencer isn't done.
+  if (m_nlasttx != 5 && m_nlasttx != 6) return;
+  on_txb6_clicked ();
+  m_autoCQPending = false;
+  writeToALLTXT ("Auto-CQ after QSO: re-armed Tx6 CQ");
+  statusBar ()->showMessage (tr ("Auto-CQ re-armed after QSO"), 4000);
 }
 
 void MainWindow::on_actionJT9_triggered()
