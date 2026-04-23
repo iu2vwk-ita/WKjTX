@@ -1,60 +1,58 @@
 # WKjTX
 
-**Weak-signal HF digital modes for Windows.** WKjTX 1.1 is a freeware
+**Weak-signal HF digital modes for Windows.** WKjTX 1.2 is a freeware
 fork of [JTDX](https://sourceforge.net/p/jtdx/), itself forked from
 [WSJT-X](https://wsjt.sourceforge.io/wsjtx.html) (K1JT). It speaks
 FT8, FT4, JT65, JT9, JT9+JT65, T10 and WSPR-2 — same decoders, same
 operating modes as upstream.
 
-## What's new in 1.1.2 — NTP clock-offset badge + one-click system resync
+## What's new in 1.2 — qrz.com Logbook · Auto-CQ · NTP time sync
 
-![WKjTX v1.1.2 — NTP +18 ms badge (top-right) next to the IC-7300 radio profile button](docs/screenshots/v1.1.2-ntp-badge.png)
+### qrz.com Logbook upload + download
 
-> Top-right corner of the menubar: the new **NTP +18 ms** badge shows
-> the live offset between your system clock and `pool.ntp.org`. It
-> sits right next to the three radio profile slots (IC-7300 active
-> in this screenshot) added in v1.1.
+![qrz.com Logbook settings — API Key, Upload mode: Automatic, eQSL mode: Automatic](docs/screenshots/v1.2.0-qrz-settings.png)
 
-- **Live NTP offset** on the menubar — green under 100 ms, amber
-  100–500 ms, red over 500 ms or when NTP is unreachable. Queried
-  every 5 minutes in the background (silent, no admin).
-- **One-click resync.** Click the badge, confirm UAC once, and
-  the clock is stepped directly by the measured SNTP offset via
-  PowerShell `Set-Date` — straight to the Win32 `SetSystemTime`
-  API, so it works even if the Windows Time service is disabled
-  or misconfigured.
-- **Optional "install" mode.** Right-click the badge →
-  *Auto-sync system clock every 10 minutes (install, UAC)*. One
-  elevated call reconfigures Windows Time Service to poll
-  `pool.ntp.org` every 600 s and restarts `w32time`. From then on
-  the clock stays aligned silently as SYSTEM — **no more UAC
-  prompts** per sync. A second menu entry reverts to the Windows
-  default (`time.windows.com`, 1-week poll) when you want to back
-  out.
-- **No-op guard.** If the last measured offset is within ±10 ms
-  the badge no-ops on click instead of spawning a UAC prompt for
-  a trivial delta.
+Settings → Reporting → qrz.com Logbook. Paste your API Key, pick
+**Automatic** (push every QSO on Log) or **Manual queue only**.
+Failed uploads park in a persistent queue with per-row retry;
+eQSL shares the same UX. Download your full qrz.com log for
+Worked-B4 colouring from **File → Download log from qrz.com…**
 
-### Earlier in 1.1
+![File menu — Upload pending QSOs / Download log from qrz.com](docs/screenshots/v1.2.0-qrz-download-menu.png)
 
-- **Day / Night theme quick-toggle** *(v1.1.1)* — `Ctrl+Shift+D`
-  flips to Amber Classic (Day), `Ctrl+Shift+N` to Amber Night,
-  without opening Settings. Two dedicated entries also sit at the
-  top of the *Tema* menu.
-- **Date-filtered ADIF export** *(v1.1.1)* — *Export ADIF log*
-  now offers *Full log*, *Since last export*, *Last 7 / 30 days*,
-  or a custom date range. Filenames carry the range tag so
-  repeated exports don't overwrite each other.
-- **3-slot radio profile quick-switch** *(v1.1.0)* — three buttons
-  in the top-right menubar corner. Slot 1 mirrors your base
-  configuration; slots 2 and 3 are independent overlays stored in
-  separate INI files under `%LOCALAPPDATA%/WKjTX/profiles/`.
-  Left-click to switch radios instantly (CAT + audio + transceiver
-  reconnect). Left-click "+" on empty slots opens a compact
-  configurator with auto-detected serial ports for CAT and PTT.
-  Right-click for Configure / Rename / Hide / Clear. Profile
-  actions never touch the base `WKjTX.ini` — mistakes in slot 2
-  or 3 stay in their own file.
+### Auto-CQ after QSO
+
+![AutoSeq menu — Auto-CQ after QSO (Ctrl+Shift+Q)](docs/screenshots/v1.2.0-autocq-menu.png)
+
+**AutoSeq → Auto-CQ after QSO** (`Ctrl+Shift+Q`). After every
+logged QSO, WKjTX re-arms Tx6 (CQ) and re-enables TX for a
+user-configurable window (1…999 min). The window extends on every
+new QSO inside it. Halt TX is always a hard stop.
+
+### NTP time-sync badge
+
+![NTP +11 ms badge in the menubar corner next to the IC-7300 radio profile](docs/screenshots/v1.2.0-ntp-badge.png)
+
+Live clock drift vs `pool.ntp.org` on the menubar — green under
+100 ms, amber 100–500 ms, red otherwise. Click to step the clock
+via PowerShell `Set-Date` (works even with Windows Time disabled).
+Right-click for optional 10-min auto-sync install.
+
+### Also in 1.2
+
+- **19 languages shipped out of the box** — Italian, English,
+  Spanish, French, German-adjacent Dutch, Portuguese (BR/PT),
+  Russian, Japanese, Chinese (simplified & traditional) and more,
+  bundled as Qt resources. Pick from the *Language* menu.
+- **UDP `SwitchProfile` (type 52) + `EnableTx` (type 53)** for
+  companion tools (Stream Deck plugin, external keyers).
+- **UPDATE DATA TLS fix** — one-click refresh works on fresh
+  portable installs again.
+
+### Earlier releases
+
+- **v1.1.1** — Day/Night theme toggle · date-filtered ADIF export · theme-switch fix.
+- **v1.1.0** — 3-slot radio profile quick-switch in the menubar corner.
 
 ## What's different from JTDX
 
@@ -105,7 +103,7 @@ operating modes as upstream.
   your browser — manual drop-in of `libhamlib-5.dll` with an
   automatic `_old` backup slot.
 
-Planned in later releases: per-profile log routing, qrz.com upload.
+Planned in later releases: per-profile log routing, third outgoing UDP port, FT2 mode.
 
 ## Download
 
