@@ -6815,21 +6815,32 @@ void MainWindow::acceptQSO2(QDateTime const& QSO_date_off, QString const& call, 
   // Tx6 immediately would overwrite m_ntx/m_nlasttx and the 73 would
   // get dropped. Instead, defer to guiUpdate's check against
   // m_transmitting + m_nlasttx; see maybeArmAutoCq().
+  //
+  // We intentionally DO NOT check m_enableTx here — the sequencer
+  // may already have parked TX off after the 73, and that's exactly
+  // the state in which we want to arm. Halt-TX-hard-stop is
+  // enforced in on_stopTxButton_clicked() by clearing the flag.
   if (m_autoCQAfterQSO
       && !m_houndMode
-      && m_mode != "WSPR-2"
-      && m_enableTx) {
+      && m_mode != "WSPR-2") {
       m_autoCQPending = true;
-      writeToALLTXT ("Auto-CQ after QSO: armed (deferred until 73 TX done)");
+      writeToALLTXT (QString ("Auto-CQ after QSO: pending (enableTx=%1 transmitting=%2 nlasttx=%3)")
+                         .arg (m_enableTx ? "on" : "off")
+                         .arg (m_transmitting ? "yes" : "no")
+                         .arg (m_nlasttx));
   }
 }
 
 void MainWindow::maybeArmAutoCq ()
 {
   if (!m_autoCQPending) return;
-  // Bail if the user halted TX or disabled the toggle between log-in
-  // and now — don't keep a stale pending state around forever.
-  if (!m_enableTx || !m_autoCQAfterQSO) {
+  // Only bail permanently if the user disabled the toggle between
+  // log-in and now. DO NOT bail on !m_enableTx — the sequencer
+  // naturally disables TX after the final 73, and that's exactly
+  // the state in which we want to arm CQ and re-enable TX. The
+  // actual "user halted TX" case is handled in
+  // on_stopTxButton_clicked() which clears m_autoCQPending directly.
+  if (!m_autoCQAfterQSO) {
       m_autoCQPending = false;
       return;
   }
@@ -6847,6 +6858,10 @@ void MainWindow::maybeArmAutoCq ()
   // If it's still 4 (RR73) or earlier the sequencer isn't done.
   if (m_nlasttx != 5 && m_nlasttx != 6) return;
   on_txb6_clicked ();
+  // Re-enable TX if the sequencer parked it after the 73.
+  if (!m_enableTx && ui->enableTxButton->isEnabled ()) {
+    ui->enableTxButton->click ();
+  }
   m_autoCQPending = false;
   // Open / refresh the active-window deadline. Each logged QSO gives
   // the station another full m_autoCQDurationMin minutes of CQ
@@ -6855,8 +6870,10 @@ void MainWindow::maybeArmAutoCq ()
   m_autoCQActive = true;
   m_autoCQDeadlineMs = QDateTime::currentMSecsSinceEpoch ()
                      + qint64 (m_autoCQDurationMin) * 60 * 1000;
-  writeToALLTXT (QString ("Auto-CQ after QSO: re-armed Tx6 CQ (window %1 min)")
-                     .arg (m_autoCQDurationMin));
+  writeToALLTXT (QString ("Auto-CQ after QSO: re-armed Tx6 CQ (window %1 min, enableTx=%2 nlasttx=%3)")
+                     .arg (m_autoCQDurationMin)
+                     .arg (m_enableTx ? "on" : "off")
+                     .arg (m_nlasttx));
   statusBar ()->showMessage (
       tr ("Auto-CQ re-armed after QSO (%1 min window)")
           .arg (m_autoCQDurationMin),
@@ -6899,7 +6916,9 @@ void MainWindow::sustainAutoCq ()
     didSomething = true;
   }
   if (didSomething) {
-    writeToALLTXT ("Auto-CQ after QSO: sustained CQ (re-armed)");
+    qint64 const remMs = m_autoCQDeadlineMs - now;
+    writeToALLTXT (QString ("Auto-CQ after QSO: sustained CQ (re-armed, %1 s left)")
+                       .arg (remMs / 1000));
   }
 }
 
