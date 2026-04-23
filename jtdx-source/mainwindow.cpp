@@ -1354,6 +1354,8 @@ void MainWindow::writeSettings()
   m_settings->setValue("QuickCall",m_autoTx);
   m_settings->setValue("AutoSequence",m_autoseq);
   m_settings->setValue("AutoCQAfterQSO", m_autoCQAfterQSO); // v1.2.0
+  m_settings->setValue("AutoCQDurationMin", m_autoCQDurationMin);
+  m_settings->setValue("AutoCQAcknowledged", m_autoCQAcknowledged);
   m_settings->setValue("SpotText",m_spotText);
   m_settings->setValue("ClearWCallAtLog",ui->cbClearCallsign->isChecked ());
   m_settings->setValue("ClearWGridAtLog",ui->cbClearGrid->isChecked ());
@@ -1661,6 +1663,12 @@ void MainWindow::readSettings()
   // v1.2.0: Auto-CQ after QSO toggle restore.
   m_autoCQAfterQSO = m_settings->value ("AutoCQAfterQSO", false).toBool ();
   ui->actionAutoCQ_after_QSO->setChecked (m_autoCQAfterQSO);
+  {
+    int d = m_settings->value ("AutoCQDurationMin", 30).toInt ();
+    if (d < 1) d = 1; if (d > 999) d = 999;
+    m_autoCQDurationMin = d;
+  }
+  m_autoCQAcknowledged = m_settings->value ("AutoCQAcknowledged", false).toBool ();
 
   m_spotText=m_settings->value("SpotText","").toString();
   ui->spotLineEdit->setText(m_spotText);
@@ -2407,15 +2415,97 @@ void MainWindow::on_actionDownload_qrz_triggered()
   m_qrzDownloader->fetch (since);
 }
 
-// v1.2.0: AutoSeq menu toggle — persist + take effect on next QSO.
+// v1.2.0: AutoSeq menu toggle — on enable, prompt the operator to
+// acknowledge the unattended-TX risk and pick a duration (1..999
+// minutes). On disable, tear down any active auto-CQ window.
 void MainWindow::on_actionAutoCQ_after_QSO_triggered(bool checked)
 {
-  m_autoCQAfterQSO = checked;
-  writeToALLTXT (QString ("Auto-CQ after QSO: ") + (checked ? "ON" : "OFF"));
-  statusBar ()->showMessage (checked
-      ? tr ("Auto-CQ after QSO: ON")
+  if (checked) {
+    if (!promptAutoCqActivation ()) {
+      // Revert the menu check without re-triggering this slot.
+      QSignalBlocker blocker {ui->actionAutoCQ_after_QSO};
+      ui->actionAutoCQ_after_QSO->setChecked (false);
+      m_autoCQAfterQSO = false;
+      return;
+    }
+    m_autoCQAfterQSO = true;
+  } else {
+    m_autoCQAfterQSO = false;
+    // Cancel any in-flight window.
+    m_autoCQPending = false;
+    m_autoCQActive = false;
+    m_autoCQDeadlineMs = 0;
+  }
+  writeToALLTXT (QString ("Auto-CQ after QSO: ")
+                 + (m_autoCQAfterQSO
+                      ? QString ("ON (%1 min)").arg (m_autoCQDurationMin)
+                      : QString ("OFF")));
+  statusBar ()->showMessage (m_autoCQAfterQSO
+      ? tr ("Auto-CQ after QSO: ON (%1 min)").arg (m_autoCQDurationMin)
       : tr ("Auto-CQ after QSO: OFF"),
       3000);
+}
+
+// v1.2.0: 2-step dialog flow used on every toggle-on. The warning
+// panel shows once per install (first-enable). The duration prompt
+// always runs so the operator consciously confirms the window each
+// session. Returns false to cancel the toggle.
+bool MainWindow::promptAutoCqActivation ()
+{
+  if (!m_autoCQAcknowledged) {
+    auto const resp = JTDXMessageBox::warning_message (
+        this,
+        tr ("Auto-CQ after QSO — unattended transmit risk"),
+        tr ("You are about to enable automatic repeated CQ transmission."),
+        tr ("With Auto-CQ after QSO enabled, WKjTX will:\n"
+            "\n"
+            "  - Automatically re-arm the Tx6 CQ message after every\n"
+            "    logged QSO.\n"
+            "  - Keep calling CQ every cycle, for the number of\n"
+            "    minutes you select (1..999), even when nobody\n"
+            "    replies.\n"
+            "\n"
+            "This means the station will transmit without an\n"
+            "operator present.\n"
+            "\n"
+            "You are responsible for:\n"
+            "  - Staying within your licence privileges (power,\n"
+            "    band, mode, duty cycle).\n"
+            "  - NEVER leaving an auto-calling station connected to\n"
+            "    a linear amplifier, a timer-switched power strip,\n"
+            "    or an antenna that can catch fire on long TX.\n"
+            "  - Monitoring the station regularly for runaway\n"
+            "    behaviour, ALC / SWR alarms, or radio faults.\n"
+            "  - Halting TX (big red button in WKjTX, or the same\n"
+            "    key on your Stream Deck via the Companion plugin)\n"
+            "    the instant anything looks wrong.\n"
+            "\n"
+            "Click OK only if you have read and accept these\n"
+            "responsibilities. Click Cancel to abort."),
+        /*detail*/ QString {},
+        QMessageBox::Ok | QMessageBox::Cancel,
+        QMessageBox::Cancel);
+    if (resp != QMessageBox::Ok) return false;
+    m_autoCQAcknowledged = true;
+    m_settings->beginGroup ("Common");
+    m_settings->setValue ("AutoCQAcknowledged", true);
+    m_settings->endGroup ();
+  }
+
+  bool ok = false;
+  int const minutes = QInputDialog::getInt (
+      this,
+      tr ("Auto-CQ duration"),
+      tr ("Keep calling CQ for how many minutes after each QSO?\n"
+          "(range 1..999 — the window resets on every logged QSO)"),
+      /*value*/ m_autoCQDurationMin,
+      /*min*/ 1, /*max*/ 999, /*step*/ 1, &ok);
+  if (!ok) return false;
+  m_autoCQDurationMin = minutes;
+  m_settings->beginGroup ("Common");
+  m_settings->setValue ("AutoCQDurationMin", m_autoCQDurationMin);
+  m_settings->endGroup ();
+  return true;
 }
 
 void MainWindow::on_enableTxButton_clicked (bool checked)
@@ -5157,6 +5247,9 @@ void MainWindow::guiUpdate()
         && m_idleMinutes >= m_config.watchdog ()) {
       txwatchdog (true);       // switch off Enable Tx button
     }
+    // v1.2.0: Auto-CQ sustained window — after a logged QSO, keep
+    // calling CQ across unanswered cycles until the deadline.
+    sustainAutoCq ();
     if(m_tune && m_config.tunetimer() && !m_tuneup) { //shall not count at WSPR band hopping
       QString remtime;
       remtime = QString::asprintf("%.0f s",StopTuneTimer.remainingTime()/1000.0);
@@ -5271,7 +5364,11 @@ void MainWindow::set_scheduler(QString const& setto,bool mixed)
   m_wideGraph->setRxBand (m_config.bands ()->find (frq));
 }
 
-void MainWindow::haltTx(QString reason) { m_haltTxWritten=true; writeHaltTxEvent(reason); on_stopTxButton_clicked(); }
+void MainWindow::haltTx(QString reason) {
+  m_haltTxWritten=true;
+  writeHaltTxEvent(reason);
+  on_stopTxButton_clicked();
+}
 
 void MainWindow::haltTxTuneTimer()
 {
@@ -6751,8 +6848,59 @@ void MainWindow::maybeArmAutoCq ()
   if (m_nlasttx != 5 && m_nlasttx != 6) return;
   on_txb6_clicked ();
   m_autoCQPending = false;
-  writeToALLTXT ("Auto-CQ after QSO: re-armed Tx6 CQ");
-  statusBar ()->showMessage (tr ("Auto-CQ re-armed after QSO"), 4000);
+  // Open / refresh the active-window deadline. Each logged QSO gives
+  // the station another full m_autoCQDurationMin minutes of CQ
+  // before it gives up — so a busy operator effectively stays on
+  // air as long as QSOs keep rolling in.
+  m_autoCQActive = true;
+  m_autoCQDeadlineMs = QDateTime::currentMSecsSinceEpoch ()
+                     + qint64 (m_autoCQDurationMin) * 60 * 1000;
+  writeToALLTXT (QString ("Auto-CQ after QSO: re-armed Tx6 CQ (window %1 min)")
+                     .arg (m_autoCQDurationMin));
+  statusBar ()->showMessage (
+      tr ("Auto-CQ re-armed after QSO (%1 min window)")
+          .arg (m_autoCQDurationMin),
+      4000);
+}
+
+// v1.2.0: called once per second from guiUpdate. Keeps CQ running
+// across unanswered cycles until the window deadline hits.
+void MainWindow::sustainAutoCq ()
+{
+  if (!m_autoCQActive) return;
+  if (!m_autoCQAfterQSO) { m_autoCQActive = false; return; }
+  qint64 const now = QDateTime::currentMSecsSinceEpoch ();
+  if (now >= m_autoCQDeadlineMs) {
+    // Window expired — stop. We do NOT call haltTx here; letting the
+    // sequencer park itself naturally is friendlier (no surprise
+    // mid-air truncation). The user must re-enable TX manually when
+    // ready to come back on air.
+    m_autoCQActive = false;
+    writeToALLTXT ("Auto-CQ after QSO: window expired, stopping");
+    statusBar ()->showMessage (tr ("Auto-CQ window expired"), 5000);
+    return;
+  }
+  // Don't interfere with in-progress QSOs or with a currently active
+  // TX slot.
+  if (!m_hisCall.isEmpty ()) return;
+  if (m_transmitting) return;
+  if (g_iptt == 1) return;
+  if (m_txNext) return;
+  // Sequencer may have turned TX off after an unanswered CQ
+  // (JTDX's "no stuck CQ loops" behaviour) or may still have it on
+  // but armed at the wrong message — re-normalise both.
+  bool didSomething = false;
+  if (m_ntx != 6 || m_QSOProgress != CALLING) {
+    on_txb6_clicked ();
+    didSomething = true;
+  }
+  if (!m_enableTx && ui->enableTxButton->isEnabled ()) {
+    ui->enableTxButton->click ();
+    didSomething = true;
+  }
+  if (didSomething) {
+    writeToALLTXT ("Auto-CQ after QSO: sustained CQ (re-armed)");
+  }
 }
 
 void MainWindow::on_actionJT9_triggered()
@@ -7571,6 +7719,10 @@ void MainWindow::on_stopTxButton_clicked()                    //Stop Tx
   if (m_enableTx and !m_tuneup) enableTx_mode (false);
   m_btxok=false;
   m_nlasttx=0;
+  // v1.2.0: Halt TX is a hard stop. Clear any auto-CQ window so
+  // sustainAutoCq() doesn't immediately turn TX back on.
+  m_autoCQActive = false;
+  m_autoCQPending = false;
 //  if(m_autofilter && m_autoseq && m_filter) autoFilter (false);
   if(m_filter && (m_FilterState==1 || m_FilterState==2)) autoFilter (false);
   if(!m_transmitting && g_iptt==1) m_haltTrans=true;

@@ -289,6 +289,13 @@ private slots:
   // final 73 TX of a logged QSO has completed. Gated behind
   // m_autoCQPending which acceptQSO2 sets.
   void maybeArmAutoCq();
+  // v1.2.0: per-second check that re-arms CQ while m_autoCQActive is
+  // true. Called from guiUpdate's once-per-second block.
+  void sustainAutoCq();
+  // v1.2.0: show warning + duration dialog on toggle-on. Returns
+  // true if the user accepted; false if they cancelled (so the
+  // toggle is reverted).
+  bool promptAutoCqActivation();
   void on_txb2_clicked();
   void on_txb3_clicked();
   void on_txb4_clicked();
@@ -725,6 +732,24 @@ private:
   // by the periodic re-arm check in guiUpdate once TX of the final
   // 73/RR73 has completed so we never pre-empt the 73 with a CQ.
   bool m_autoCQPending {false};
+  // v1.2.0: true while the auto-CQ window is active (between a first
+  // arm after acceptQSO2 and the user-configured minute-deadline).
+  // While true, guiUpdate sustains the CQ loop by re-enabling TX and
+  // re-arming Tx6 if the sequencer parks itself after an unanswered
+  // call. Cleared by deadline, Halt TX, or toggle-off.
+  bool m_autoCQActive {false};
+  // Wall-clock deadline for the current auto-CQ window. Re-computed
+  // from m_autoCQDurationMin each time maybeArmAutoCq() fires — so
+  // every logged QSO extends the window by another full duration
+  // ("keep calling CQ for N more minutes from my last contact").
+  qint64 m_autoCQDeadlineMs {0};
+  // User-configured window size. 1..999 minutes, default 30. Stored
+  // under QSettings key AutoCQDurationMin.
+  int m_autoCQDurationMin {30};
+  // First-enable acknowledgement of the risk warning. Persisted under
+  // QSettings key AutoCQAcknowledged. Once true the warning is not
+  // shown again on subsequent toggle-on, only the duration prompt.
+  bool m_autoCQAcknowledged {false};
 
   QTimer m_guiTimer;
   QTimer ptt1Timer;                 //StartTx delay
