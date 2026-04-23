@@ -750,6 +750,13 @@ private:
   // QSettings key AutoCQAcknowledged. Once true the warning is not
   // shown again on subsequent toggle-on, only the duration prompt.
   bool m_autoCQAcknowledged {false};
+  // Edge-detect state for the secondary auto-CQ trigger — used when
+  // the operator does NOT have Prompt-to-log / Auto-log enabled,
+  // so acceptQSO2 never fires. When m_transmitting transitions from
+  // true → false while m_nlasttx == 5 we know a 73 just finished on
+  // air and we should open the auto-CQ window. Tracked across
+  // guiUpdate ticks.
+  bool m_autoCQLastTransmitting {false};
 
   QTimer m_guiTimer;
   QTimer ptt1Timer;                 //StartTx delay

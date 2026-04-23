@@ -4809,6 +4809,17 @@ void MainWindow::guiUpdate()
 
   // v1.2.0: once per guiUpdate tick, check whether we should arm the
   // CQ message now that the previously logged QSO's 73 has gone out.
+  // Edge-detect: if we just finished transmitting a 73 (nlasttx=5),
+  // that's the equivalent of "QSO ended" for operators who don't use
+  // the Prompt-to-log / Auto-log workflows (so acceptQSO2 never
+  // fires). Arm the pending flag here too.
+  if (m_autoCQAfterQSO && m_autoCQLastTransmitting && !m_transmitting
+      && m_nlasttx == 5 && !m_houndMode && m_mode != "WSPR-2"
+      && !m_autoCQActive && !m_autoCQPending) {
+      m_autoCQPending = true;
+      writeToALLTXT ("Auto-CQ after QSO: pending (edge-detect: 73 TX finished)");
+  }
+  m_autoCQLastTransmitting = m_transmitting;
   maybeArmAutoCq ();
 
   if(m_mode.left(4)=="WSPR") {
