@@ -25,3 +25,7 @@ Thumbs.db
 .DS_Store
 __pycache__/
 *.pyc
+
+# build logs from build.bat iterations
+build-v*.log
+*-attempt*.log
