@@ -974,6 +974,11 @@ MainWindow::MainWindow(bool multiple, QSettings * settings, QSharedMemory *shdme
   cqButtonTimer.setSingleShot(true); connect(&cqButtonTimer, &QTimer::timeout, this, &MainWindow::on_pbCallCQ_clicked);
   enableTxButtonTimer.setSingleShot(true); connect(&enableTxButtonTimer, &QTimer::timeout, this, &MainWindow::enableTxButton_off);
   tx73ButtonTimer.setSingleShot(true); connect(&tx73ButtonTimer, &QTimer::timeout, this, &MainWindow::on_pbSend73_clicked);
+  // v1.2.0: fallback timer for Auto-CQ after QSO. Armed in acceptQSO2;
+  // fires ~3.5 s later and force-arms Tx6+Enable TX when the gated
+  // maybeArmAutoCq path never gets a chance (operator logs before
+  // the 73 TX completes, so m_nlasttx never hits 5/6).
+  m_autoCqKickTimer.setSingleShot(true); connect(&m_autoCqKickTimer, &QTimer::timeout, this, &MainWindow::autoCqKickFired);
   logClearDXTimer.setSingleShot(true); connect(&logClearDXTimer, &QTimer::timeout, this, &MainWindow::logClearDX);
   dxbcallTxHaltedClearTimer.setSingleShot(true); connect(&dxbcallTxHaltedClearTimer, &QTimer::timeout, this, &MainWindow::dxbcallTxHaltedClear);
   tuneATU_Timer.setSingleShot(true); connect(&tuneATU_Timer, &QTimer::timeout, this, &MainWindow::stopTuneATU);
@@ -2435,6 +2440,7 @@ void MainWindow::on_actionAutoCQ_after_QSO_triggered(bool checked)
     m_autoCQPending = false;
     m_autoCQActive = false;
     m_autoCQDeadlineMs = 0;
+    m_autoCqKickTimer.stop ();
   }
   writeToALLTXT (QString ("Auto-CQ after QSO: ")
                  + (m_autoCQAfterQSO
@@ -6842,7 +6848,37 @@ void MainWindow::acceptQSO2(QDateTime const& QSO_date_off, QString const& call, 
                          .arg (m_enableTx ? "on" : "off")
                          .arg (m_transmitting ? "yes" : "no")
                          .arg (m_nlasttx));
+      // Fallback: if the natural sequencer path in maybeArmAutoCq()
+      // can't fire (because nlasttx never reaches 5/6 — happens when
+      // the operator uses Prompt-to-log and clicks Log before the
+      // final 73 TX even starts), kick the arm from a timer. Armed
+      // a bit longer than a single FT8 TX slot so we don't fight an
+      // in-progress 73.
+      m_autoCqKickTimer.start (3500);
   }
+}
+
+void MainWindow::forceArmAutoCq ()
+{
+  // Shared arm path — called by maybeArmAutoCq (natural) and by
+  // autoCqKickFired (timed fallback). Does the equivalent of clicking
+  // the Tx6 button and the Enable Tx button on the UI, then opens the
+  // active-window deadline that sustainAutoCq maintains afterwards.
+  on_txb6_clicked ();
+  if (!m_enableTx && ui->enableTxButton->isEnabled ()) {
+    ui->enableTxButton->click ();
+  }
+  m_autoCQPending = false;
+  // Each arm resets the deadline to a full duration from now — so
+  // back-to-back QSOs keep the station calling CQ indefinitely, as
+  // long as each logged QSO extends the window by another N minutes.
+  m_autoCQActive = true;
+  m_autoCQDeadlineMs = QDateTime::currentMSecsSinceEpoch ()
+                     + qint64 (m_autoCQDurationMin) * 60 * 1000;
+  statusBar ()->showMessage (
+      tr ("Auto-CQ re-armed after QSO (%1 min window)")
+          .arg (m_autoCQDurationMin),
+      4000);
 }
 
 void MainWindow::maybeArmAutoCq ()
@@ -6856,6 +6892,7 @@ void MainWindow::maybeArmAutoCq ()
   // on_stopTxButton_clicked() which clears m_autoCQPending directly.
   if (!m_autoCQAfterQSO) {
       m_autoCQPending = false;
+      m_autoCqKickTimer.stop ();
       return;
   }
   // Wait until we're not actively transmitting (so we don't cut off
@@ -6870,28 +6907,38 @@ void MainWindow::maybeArmAutoCq ()
   if (m_txNext) return;              // Next TX already scheduled
   // Wait for nlasttx to reach 5 at least — proves the 73 was sent.
   // If it's still 4 (RR73) or earlier the sequencer isn't done.
+  // The fallback m_autoCqKickTimer will force the arm a few seconds
+  // after the log event if we never clear this gate.
   if (m_nlasttx != 5 && m_nlasttx != 6) return;
-  on_txb6_clicked ();
-  // Re-enable TX if the sequencer parked it after the 73.
-  if (!m_enableTx && ui->enableTxButton->isEnabled ()) {
-    ui->enableTxButton->click ();
-  }
-  m_autoCQPending = false;
-  // Open / refresh the active-window deadline. Each logged QSO gives
-  // the station another full m_autoCQDurationMin minutes of CQ
-  // before it gives up — so a busy operator effectively stays on
-  // air as long as QSOs keep rolling in.
-  m_autoCQActive = true;
-  m_autoCQDeadlineMs = QDateTime::currentMSecsSinceEpoch ()
-                     + qint64 (m_autoCQDurationMin) * 60 * 1000;
-  writeToALLTXT (QString ("Auto-CQ after QSO: re-armed Tx6 CQ (window %1 min, enableTx=%2 nlasttx=%3)")
+  m_autoCqKickTimer.stop ();         // natural path won the race
+  forceArmAutoCq ();
+  writeToALLTXT (QString ("Auto-CQ after QSO: re-armed Tx6 CQ via sequencer (window %1 min, enableTx=%2 nlasttx=%3)")
                      .arg (m_autoCQDurationMin)
                      .arg (m_enableTx ? "on" : "off")
                      .arg (m_nlasttx));
-  statusBar ()->showMessage (
-      tr ("Auto-CQ re-armed after QSO (%1 min window)")
-          .arg (m_autoCQDurationMin),
-      4000);
+}
+
+void MainWindow::autoCqKickFired ()
+{
+  // Timed fallback: acceptQSO2 armed this timer ~3.5 s ago. If the
+  // natural path in maybeArmAutoCq already fired, m_autoCQPending is
+  // now false and we bail. Otherwise arm unconditionally.
+  if (!m_autoCQPending) return;
+  if (!m_autoCQAfterQSO) { m_autoCQPending = false; return; }
+  if (m_houndMode)      { m_autoCQPending = false; return; }
+  if (m_mode == "WSPR-2") { m_autoCQPending = false; return; }
+  // If TX is still in progress (a long slow-mode 73, or PTT still
+  // asserted) hold off one more second — don't cut the 73 off mid
+  // air.
+  if (m_transmitting || g_iptt == 1 || m_txNext) {
+    m_autoCqKickTimer.start (1000);
+    return;
+  }
+  forceArmAutoCq ();
+  writeToALLTXT (QString ("Auto-CQ after QSO: re-armed Tx6 CQ via kick-timer (window %1 min, enableTx=%2 nlasttx=%3)")
+                     .arg (m_autoCQDurationMin)
+                     .arg (m_enableTx ? "on" : "off")
+                     .arg (m_nlasttx));
 }
 
 // v1.2.0: called once per second from guiUpdate. Keeps CQ running
@@ -7753,9 +7800,11 @@ void MainWindow::on_stopTxButton_clicked()                    //Stop Tx
   m_btxok=false;
   m_nlasttx=0;
   // v1.2.0: Halt TX is a hard stop. Clear any auto-CQ window so
-  // sustainAutoCq() doesn't immediately turn TX back on.
+  // sustainAutoCq() doesn't immediately turn TX back on, and cancel
+  // the pending kick-timer so it doesn't force-arm after the halt.
   m_autoCQActive = false;
   m_autoCQPending = false;
+  m_autoCqKickTimer.stop ();
 //  if(m_autofilter && m_autoseq && m_filter) autoFilter (false);
   if(m_filter && (m_FilterState==1 || m_FilterState==2)) autoFilter (false);
   if(!m_transmitting && g_iptt==1) m_haltTrans=true;

@@ -292,6 +292,17 @@ private slots:
   // v1.2.0: per-second check that re-arms CQ while m_autoCQActive is
   // true. Called from guiUpdate's once-per-second block.
   void sustainAutoCq();
+  // v1.2.0: unconditional arm — click Tx6 and, if necessary, click
+  // the Enable TX button. Shared by maybeArmAutoCq (natural sequencer
+  // path) and autoCqKickFired (timed fallback). Opens the active
+  // window so sustainAutoCq takes over afterwards.
+  void forceArmAutoCq();
+  // v1.2.0: fallback kick — scheduled by acceptQSO2 on m_autoCqKickTimer
+  // so that the Auto-CQ arm still happens even when the sequencer
+  // never advances m_nlasttx to 5/6 (e.g. operators who log before
+  // the final 73 is actually transmitted). Re-arms itself by 1s if
+  // TX is still in progress when it fires.
+  void autoCqKickFired();
   // v1.2.0: show warning + duration dialog on toggle-on. Returns
   // true if the user accepted; false if they cancelled (so the
   // toggle is reverted).
@@ -757,6 +768,11 @@ private:
   // air and we should open the auto-CQ window. Tracked across
   // guiUpdate ticks.
   bool m_autoCQLastTransmitting {false};
+  // Fallback single-shot armed by acceptQSO2. Fires ~3.5 s after the
+  // QSO is logged and calls forceArmAutoCq() if TX is idle. Halt TX,
+  // toggle-off, or a successful natural-path arm via maybeArmAutoCq
+  // all stop it before it fires.
+  QTimer m_autoCqKickTimer;
 
   QTimer m_guiTimer;
   QTimer ptt1Timer;                 //StartTx delay
