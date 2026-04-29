@@ -8,6 +8,15 @@ upstream JTDX version is preserved in internal Versions.cmake
 for code compatibility, but public releases are tagged
 `v0.1.0` → `v1.0.0` reflecting WKjTX's own delivery phases.
 
+## [v1.2.2] — 2026-04-29 — Minor installer bug fix
+
+### Fixed
+- Minor installer bug fix. No source changes versus v1.2.1; this
+  release re-cuts the NSIS installer with a corrected version string
+  in the Add/Remove Programs entry and the Start Menu shortcut.
+  Operators on v1.2.1 do not need to update unless they want the
+  cosmetic fix.
+
 ## [v1.2.1] — 2026-04-29 — Radio profile switch fix
 
 ### Fixed
