@@ -8,6 +8,63 @@ upstream JTDX version is preserved in internal Versions.cmake
 for code compatibility, but public releases are tagged
 `v0.1.0` → `v1.0.0` reflecting WKjTX's own delivery phases.
 
+## [v1.2.1] — 2026-04-29 — Radio profile switch fix
+
+### Fixed
+- **Radio profile buttons (slot 2 / slot 3) no longer keep the base
+  radio connected.** `Configuration::applyRadioFromSettings()` now
+  mirrors the freshly-applied `rig_params_` into the Settings dialog
+  widgets that `gather_rig_data()` reads from. Without this, the next
+  `transceiver_online()` call inside `ProfileManager::switchToSlot()`
+  closed the rig and immediately reopened it with the dialog's stale
+  values, ending up on whatever radio was selected before the switch.
+- **Profile switches no longer corrupt the main JTDX.ini base
+  config.** While an overlay profile (slot 2 / 3) is active,
+  `Configuration::write_settings()` skips the rig + audio field writes
+  that would otherwise overwrite the user's base radio configuration
+  with the active overlay's values on Settings-dialog accept or app
+  exit.
+- **Slot 1 button now restores the main radio after a slot 2/3
+  switch.** ProfileManager refreshes slot1.ini from the live config
+  the moment the user leaves slot 1 (so the baseline always reflects
+  the operator's actual main-radio state, not a stale snapshot from
+  app start), then re-applies it on switchToSlot(1) instead of the
+  previous no-op `transceiver_online()` call. An in-memory baseline
+  copy is also kept as a fallback path.
+- Profile INI keys absent from a slot file (`CATNetworkPort`,
+  `CATTCIPort`, `CATUSBPort`, `TCIAudio`, `CATRequestSNR`,
+  `CATRequestPower`, `RigPower`, `RigPower_off`, `RigShare_ptt`) now
+  fall back to the live `rig_params_` value instead of being clobbered
+  to empty / false defaults.
+- ProfileManager rollback path now actually re-applies the previous
+  slot's INI on CAT-open failure instead of just calling
+  `transceiver_online()` again with the same broken settings.
+
+### Added
+- `Configuration::impl::push_rig_params_to_widgets()` — focused helper
+  that updates only the radio-related widgets (rig name, CAT port,
+  baud, handshake, DTR/RTS, poll, PTT, audio source, split). Avoids
+  the unrelated UI side effects of a full `initialize_models()` call.
+- `Configuration::reopenRigWithCurrentParams()` /
+  `Configuration::impl::open_rig_with(ParameterPack)` — reopen the
+  transceiver using the live `rig_params_` directly, bypassing the
+  Settings dialog widget scrape inside `gather_rig_data()`. The
+  ProfileManager switch path now uses this instead of the generic
+  `transceiver_online()`, eliminating the class of bugs where a slot
+  field failed to round-trip through the UI mirror and the new
+  hardware connection silently inherited stale defaults.
+- `Configuration::setActiveProfileSlot(int)` /
+  `activeProfileSlot()` — tells `write_settings()` which slot is
+  currently the source of truth for rig/audio fields. Slot 1 → write
+  through to JTDX.ini; slot ≥ 2 → suppress the writes.
+- `Configuration::base_rig_settings_persisted()` Qt signal — emitted
+  at the end of every `write_settings()` pass that ran while slot 1
+  was active. ProfileManager listens to refresh slot1.ini.
+- `ProfileManager::refreshSlot1Baseline()` — re-snapshots the live
+  Configuration into slot1.ini after each base-config save, so a
+  later slot-1 switch always restores the user's most recent main
+  radio configuration.
+
 ## [v1.2.0] — 2026-04-23 — qrz.com Logbook + Auto-CQ + NTP time sync
 
 This is the first public release to ship the qrz.com Logbook

@@ -23,6 +23,13 @@ ProfileManager::ProfileManager (Configuration * cfg, QObject * parent)
   slots_.resize (kMaxSlots);
   for (int i = 0; i < kMaxSlots; ++i)
     slots_[i].slotIndex = i + 1;
+
+  // Refresh the slot 1 baseline whenever the user edits + saves the
+  // main JTDX.ini config (Settings dialog → OK while slot 1 is active).
+  // Without this, a later switch slot 2 → slot 1 would re-apply a stale
+  // baseline that predates the user's edits.
+  connect (cfg_, &Configuration::base_rig_settings_persisted,
+           this, &ProfileManager::refreshSlot1Baseline);
 }
 
 ProfileManager::~ProfileManager () = default;
@@ -43,8 +50,26 @@ void ProfileManager::loadAll ()
   // saved yet, default to "Radio 1".
   if (slots_[0].name.isEmpty ())
     slots_[0].name = QStringLiteral ("Radio 1");
-  slots_[0].valid = true;
+  slots_[0].valid   = true;
+  if (slots_[0].iniPath.isEmpty ())
+    slots_[0].iniPath = QStringLiteral ("%1/slot1.ini").arg (profilesDir_);
+
+  // Capture the live (just-loaded-from-JTDX.ini) radio settings as the
+  // slot 1 baseline. Held in memory rather than serialised to INI so
+  // enum fields cannot be lost in a QVariant round-trip. We still
+  // mirror the snapshot into slot1.ini for backwards compatibility
+  // and so something on disk reflects "what slot 1 looks like".
+  baseline_rig_params_ = cfg_->currentRigParams ();
+  baseline_captured_   = true;
+  {
+    QSettings ini {slots_[0].iniPath, QSettings::IniFormat};
+    ini.setValue (QStringLiteral ("Profile/Name"),    slots_[0].name);
+    ini.setValue (QStringLiteral ("Profile/Visible"), slots_[0].visible);
+    cfg_->snapshotRadioToSettings (ini);
+  }
+
   active_slot_ = 1;
+  cfg_->setActiveProfileSlot (1);
   emit slotsChanged ();
 }
 
@@ -92,27 +117,60 @@ SwitchResult ProfileManager::switchToSlot (int slotIndex)
   if (slotIndex < 1 || slotIndex > kMaxSlots) return SwitchResult::UnknownError;
   Profile const & target = slots_[slotIndex - 1];
   if (!target.valid) return SwitchResult::IniMissing;
+  if (target.iniPath.isEmpty ()) return SwitchResult::IniMissing;
 
   emit aboutToSwitch (active_slot_, slotIndex);
 
-  if (slotIndex == 1) {
-    // Slot 1 = reapply the main app configuration. The main settings are
-    // already live in memory, so we just need to nudge the transceiver to
-    // reconnect with them. No INI read, no overwrite.
-    if (!cfg_->transceiver_online ()) return SwitchResult::CatOpenFailed;
-    active_slot_ = 1;
-    emit switched (1);
-    return SwitchResult::Ok;
+  // The persistence-gate must be flipped BEFORE applyRadioFromSettings,
+  // because that call already mutates rig_params_ and any side-effect
+  // write (e.g. a Settings dialog accept fired by Qt event reentrancy)
+  // must see the correct active slot.
+  cfg_->setActiveProfileSlot (slotIndex);
+
+  // If we're about to LEAVE slot 1, refresh slot1.ini with the
+  // currently-live config first. This guarantees that the baseline on
+  // disk reflects what was active just before the user pressed an
+  // overlay button, regardless of whether write_settings() has been
+  // called since the last edit. Without this, an INI snapshot taken
+  // way back at app start can drift from what the user currently
+  // expects "Radio 1" to mean.
+  if (active_slot_ == 1 && slotIndex != 1) {
+    QSettings baseIni {slots_[0].iniPath, QSettings::IniFormat};
+    baseIni.setValue (QStringLiteral ("Profile/Name"),    slots_[0].name);
+    baseIni.setValue (QStringLiteral ("Profile/Visible"), slots_[0].visible);
+    cfg_->snapshotRadioToSettings (baseIni);
+    baseline_rig_params_ = cfg_->currentRigParams ();
+    baseline_captured_   = true;
   }
 
+  // Apply the target slot's INI to the live Configuration. Slot 1's
+  // INI is the baseline that was just refreshed above (or captured at
+  // loadAll); slot 2/3's INI is the user-edited overlay from
+  // RadioProfileDialog. Either way the apply path is identical and
+  // covers both rig + audio fields.
   QSettings ini {target.iniPath, QSettings::IniFormat};
-  if (ini.status () != QSettings::NoError) return SwitchResult::IniMissing;
-
+  if (ini.status () != QSettings::NoError) {
+    cfg_->setActiveProfileSlot (active_slot_);  // unwind flag
+    return SwitchResult::IniMissing;
+  }
   cfg_->applyRadioFromSettings (ini);
 
-  if (!cfg_->transceiver_online ()) {
-    // Roll back to the main config (slot 1) on CAT failure.
-    cfg_->transceiver_online ();
+  // Use the rig_params_-driven reopen path rather than the generic
+  // transceiver_online() — the latter routes through gather_rig_data()
+  // which scrapes the Settings dialog widgets, and any field that fails
+  // to round-trip through that scrape (e.g. a baud combo that doesn't
+  // contain the slot's exact value, or a serial port not present in the
+  // freshly re-enumerated list) silently turns into the wrong rig.
+  if (!cfg_->reopenRigWithCurrentParams ()) {
+    int const previous = active_slot_;
+    QString const prevPath = slots_[previous - 1].iniPath;
+    if (!prevPath.isEmpty ()) {
+      QSettings prevIni {prevPath, QSettings::IniFormat};
+      if (prevIni.status () == QSettings::NoError)
+        cfg_->applyRadioFromSettings (prevIni);
+    }
+    cfg_->setActiveProfileSlot (previous);
+    cfg_->reopenRigWithCurrentParams ();
     return SwitchResult::CatOpenFailed;
   }
 
@@ -147,5 +205,17 @@ void ProfileManager::showAllSlots ()
 bool ProfileManager::closeCurrentResources ()  { return true; }
 bool ProfileManager::openResourcesForSlot (int) { return true; }
 void ProfileManager::rollback (int)             {}
+
+void ProfileManager::refreshSlot1Baseline ()
+{
+  if (slots_.isEmpty ()) return;
+  if (slots_[0].iniPath.isEmpty ())
+    slots_[0].iniPath = QStringLiteral ("%1/slot1.ini").arg (profilesDir_);
+  ensureProfilesDirExists ();
+  QSettings ini {slots_[0].iniPath, QSettings::IniFormat};
+  ini.setValue (QStringLiteral ("Profile/Name"),    slots_[0].name);
+  ini.setValue (QStringLiteral ("Profile/Visible"), slots_[0].visible);
+  cfg_->snapshotRadioToSettings (ini);
+}
 
 } // namespace wkjtx

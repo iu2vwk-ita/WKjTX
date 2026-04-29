@@ -12,6 +12,8 @@
 #include <QString>
 #include <QVector>
 
+#include "../TransceiverFactory.hpp"
+
 class QSettings;
 class Configuration;
 
@@ -87,11 +89,25 @@ signals:
   // Fired when the slots vector changes (slot created, renamed, deleted).
   void slotsChanged ();
 
+private slots:
+  // Re-snapshot the live Configuration into slot1.ini. Called after the
+  // base config is persisted to JTDX.ini so the baseline always matches
+  // the user's most recent main-config edits.
+  void refreshSlot1Baseline ();
+
 private:
   Configuration * cfg_ {nullptr};
   QVector<Profile> slots_;
   int active_slot_ {0};
   QString profilesDir_;            // %LOCALAPPDATA%/WKjTX/profiles/
+
+  // In-memory snapshot of the slot 1 (base) rig parameters captured at
+  // app start. Switching back to slot 1 from an overlay restores this
+  // pack directly into Configuration, sidestepping any INI round-trip
+  // serialization issues with enum fields. Refreshed whenever the user
+  // edits + saves the main config on slot 1.
+  TransceiverFactory::ParameterPack baseline_rig_params_ {};
+  bool                              baseline_captured_ {false};
 
   void ensureProfilesDirExists ();
   Profile readProfileIni (QString const & path, int slotIndex) const;

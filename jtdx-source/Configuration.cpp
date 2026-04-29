@@ -406,6 +406,11 @@ private:
   void set_application_font (QFont const&);
 
   void initialize_models ();
+  // Push the current rig_params_ into the Settings-dialog widgets that
+  // gather_rig_data() reads from. Used by applyRadioFromSettings() so
+  // the next open_rig() picks up profile-supplied values instead of
+  // the dialog's stale defaults.
+  void push_rig_params_to_widgets ();
   bool split_mode () const
   {
     return
@@ -414,6 +419,13 @@ private:
   }
   void set_cached_mode ();
   bool open_rig (bool force = false);
+  // Profile-switch path: open the rig with caller-supplied parameters,
+  // bypassing the Settings dialog widget scrape that gather_rig_data()
+  // performs. Used when ProfileManager has already pushed a slot's
+  // params into rig_params_ and needs to reopen the hardware with
+  // exactly those values, without any chance of the UI mirror dropping
+  // a field.
+  bool open_rig_with (TransceiverFactory::ParameterPack const & rig_data, bool force = true);
   //bool set_mode ();
   void close_rig ();
   TransceiverFactory::ParameterPack gather_rig_data ();
@@ -639,6 +651,12 @@ private:
   bool rig_active_;
   bool have_rig_;
   bool rig_changed_;
+  // WKjTX: which profile slot is currently driving the live rig.
+  // Slot 1 = main JTDX.ini config; slot >= 2 = an overlay loaded from
+  // %LOCALAPPDATA%/WKjTX/profiles/slotN.ini. write_settings() suppresses
+  // persistence of rig/audio fields when active_profile_slot_ != 1 to
+  // avoid clobbering the slot-1 baseline.
+  int active_profile_slot_ = 1;
   TransceiverState cached_rig_state_;
   int rig_resolution_;          // see Transceiver::resolution signal
   double frequency_calibration_intercept_;
@@ -1168,6 +1186,40 @@ bool Configuration::is_transceiver_online () const
   return m_->rig_active_;
 }
 
+void Configuration::setActiveProfileSlot (int slot)
+{
+  if (slot < 1) slot = 1;
+  m_->active_profile_slot_ = slot;
+}
+
+int Configuration::activeProfileSlot () const
+{
+  return m_->active_profile_slot_;
+}
+
+bool Configuration::reopenRigWithCurrentParams ()
+{
+  // Force = true: always close and reopen, even if the rig_data
+  // computed below happens to compare equal to saved_rig_params_.
+  // Profile switches must always recreate the Transceiver because the
+  // operator deliberately asked to talk to a different physical radio.
+  return m_->open_rig_with (m_->rig_params_, /*force=*/true);
+}
+
+TransceiverFactory::ParameterPack Configuration::currentRigParams () const
+{
+  return m_->rig_params_;
+}
+
+void Configuration::setRigParams (TransceiverFactory::ParameterPack const & params)
+{
+  m_->rig_params_ = params;
+  // Mirror the change into the Settings dialog widgets so anything
+  // that subsequently scrapes them (e.g. opening the dialog, calling
+  // gather_rig_data() outside the profile path) sees the new state.
+  m_->push_rig_params_to_widgets ();
+}
+
 bool Configuration::is_dummy_rig () const
 {
   return m_->rig_is_dummy_;
@@ -1241,30 +1293,42 @@ void Configuration::applyRadioFromSettings (QSettings & src)
   QString const oldIn  = m.audio_input_device_.deviceName ();
   QString const oldOut = m.audio_output_device_.deviceName ();
 
-  m.rig_params_.rig_name      = src.value ("Rig").toString ();
-  m.rig_params_.serial_port   = src.value ("CATSerialPort").toString ();
-  m.rig_params_.baud          = src.value ("CATSerialRate").toInt ();
-  m.rig_params_.data_bits     = src.value ("CATDataBits").value<TransceiverFactory::DataBits> ();
-  m.rig_params_.stop_bits     = src.value ("CATStopBits").value<TransceiverFactory::StopBits> ();
-  m.rig_params_.handshake     = src.value ("CATHandshake").value<TransceiverFactory::Handshake> ();
-  m.rig_params_.network_port  = src.value ("CATNetworkPort").toString ();
-  m.rig_params_.tci_port      = src.value ("CATTCIPort").toString ();
-  m.rig_params_.usb_port      = src.value ("CATUSBPort").toString ();
-  m.rig_params_.force_dtr     = src.value ("CATForceDTR").toBool ();
-  m.rig_params_.dtr_high      = src.value ("DTR").toBool ();
-  m.rig_params_.force_rts     = src.value ("CATForceRTS").toBool ();
-  m.rig_params_.rts_high      = src.value ("RTS").toBool ();
-  m.rig_params_.audio_source  = src.value ("TXAudioSource").value<TransceiverFactory::TXAudioSource> ();
-  m.rig_params_.poll_interval = src.value ("Polling").toInt ();
-  m.rig_params_.split_mode    = src.value ("SplitMode").value<TransceiverFactory::SplitMode> ();
-  m.rig_params_.ptt_type      = src.value ("PTTMethod").value<TransceiverFactory::PTTMethod> ();
-  m.rig_params_.ptt_port      = src.value ("PTTport").toString ();
-  m.tci_audio_                = src.value ("TCIAudio").toBool ();
-  m.do_snr_                   = src.value ("CATRequestSNR").toBool ();
-  m.do_pwr_                   = src.value ("CATRequestPower").toBool ();
-  m.rig_power_                = src.value ("RigPower").toBool ();
-  m.rig_power_off_            = src.value ("RigPower_off").toBool ();
-  m.rig_ptt_share_            = src.value ("RigShare_ptt").toBool ();
+  // Each src.value() falls back to the current rig_params_ field when the
+  // key is absent. This matters for partial profiles produced by the slim
+  // RadioProfileDialog, which only writes a subset of the keys that
+  // snapshotRadioToSettings() is willing to read back. Without the
+  // fallback, missing keys would clobber live values with defaults
+  // (empty strings / zero / false).
+  m.rig_params_.rig_name      = src.value ("Rig",            m.rig_params_.rig_name).toString ();
+  m.rig_params_.serial_port   = src.value ("CATSerialPort",  m.rig_params_.serial_port).toString ();
+  m.rig_params_.baud          = src.value ("CATSerialRate",  m.rig_params_.baud).toInt ();
+  m.rig_params_.data_bits     = src.value ("CATDataBits",    QVariant::fromValue (m.rig_params_.data_bits))
+                                   .value<TransceiverFactory::DataBits> ();
+  m.rig_params_.stop_bits     = src.value ("CATStopBits",    QVariant::fromValue (m.rig_params_.stop_bits))
+                                   .value<TransceiverFactory::StopBits> ();
+  m.rig_params_.handshake     = src.value ("CATHandshake",   QVariant::fromValue (m.rig_params_.handshake))
+                                   .value<TransceiverFactory::Handshake> ();
+  m.rig_params_.network_port  = src.value ("CATNetworkPort", m.rig_params_.network_port).toString ();
+  m.rig_params_.tci_port      = src.value ("CATTCIPort",     m.rig_params_.tci_port).toString ();
+  m.rig_params_.usb_port      = src.value ("CATUSBPort",     m.rig_params_.usb_port).toString ();
+  m.rig_params_.force_dtr     = src.value ("CATForceDTR",    m.rig_params_.force_dtr).toBool ();
+  m.rig_params_.dtr_high      = src.value ("DTR",            m.rig_params_.dtr_high).toBool ();
+  m.rig_params_.force_rts     = src.value ("CATForceRTS",    m.rig_params_.force_rts).toBool ();
+  m.rig_params_.rts_high      = src.value ("RTS",            m.rig_params_.rts_high).toBool ();
+  m.rig_params_.audio_source  = src.value ("TXAudioSource",  QVariant::fromValue (m.rig_params_.audio_source))
+                                   .value<TransceiverFactory::TXAudioSource> ();
+  m.rig_params_.poll_interval = src.value ("Polling",        m.rig_params_.poll_interval & 0x7fff).toInt ();
+  m.rig_params_.split_mode    = src.value ("SplitMode",      QVariant::fromValue (m.rig_params_.split_mode))
+                                   .value<TransceiverFactory::SplitMode> ();
+  m.rig_params_.ptt_type      = src.value ("PTTMethod",      QVariant::fromValue (m.rig_params_.ptt_type))
+                                   .value<TransceiverFactory::PTTMethod> ();
+  m.rig_params_.ptt_port      = src.value ("PTTport",        m.rig_params_.ptt_port).toString ();
+  m.tci_audio_                = src.value ("TCIAudio",         m.tci_audio_).toBool ();
+  m.do_snr_                   = src.value ("CATRequestSNR",    m.do_snr_).toBool ();
+  m.do_pwr_                   = src.value ("CATRequestPower",  m.do_pwr_).toBool ();
+  m.rig_power_                = src.value ("RigPower",         m.rig_power_).toBool ();
+  m.rig_power_off_            = src.value ("RigPower_off",     m.rig_power_off_).toBool ();
+  m.rig_ptt_share_            = src.value ("RigShare_ptt",     m.rig_ptt_share_).toBool ();
 
   QString const newIn  = src.value ("SoundInName").toString ();
   QString const newOut = src.value ("SoundOutName").toString ();
@@ -1279,6 +1343,14 @@ void Configuration::applyRadioFromSettings (QSettings & src)
 
   m.restart_sound_input_device_  = (m.audio_input_device_.deviceName ()  != oldIn);
   m.restart_sound_output_device_ = (m.audio_output_device_.deviceName () != oldOut);
+
+  // CRITICAL: open_rig() ultimately calls gather_rig_data(), which reads
+  // from the Settings dialog's UI widgets — NOT from rig_params_. Mirror
+  // the freshly-applied params into the radio-related widgets so the
+  // next transceiver_online() call opens the correct rig. Without this
+  // the profile-button switch closes the rig and reopens it with the
+  // dialog's still-stale values, leaving the user on the base radio.
+  m.push_rig_params_to_widgets ();
 
   m.close_rig ();
 }
@@ -2901,12 +2973,18 @@ void Configuration::impl::write_settings ()
   settings_->setValue ("EnableContent", enableContent_);
   settings_->setValue ("EnableCountryFilter", enableCountryFilter_);
   settings_->setValue ("EnableCallsignFilter", enableCallsignFilter_);
-  settings_->setValue ("CATRequestSNR", do_snr_);
-  settings_->setValue ("CATRequestPower", do_pwr_);
-  settings_->setValue ("RigPower", rig_power_);
-  settings_->setValue ("RigPower_off", rig_power_off_);
-  settings_->setValue ("RigShare_ptt", rig_ptt_share_);
-  settings_->setValue ("TCIAudio", tci_audio_);
+  // WKjTX: rig/audio fields are persisted to JTDX.ini only while the
+  // base profile (slot 1) is active. While an overlay profile is live,
+  // its slotN.ini holds the truth and JTDX.ini must stay untouched
+  // for those keys.
+  if (active_profile_slot_ == 1) {
+    settings_->setValue ("CATRequestSNR", do_snr_);
+    settings_->setValue ("CATRequestPower", do_pwr_);
+    settings_->setValue ("RigPower", rig_power_);
+    settings_->setValue ("RigPower_off", rig_power_off_);
+    settings_->setValue ("RigShare_ptt", rig_ptt_share_);
+    settings_->setValue ("TCIAudio", tci_audio_);
+  }
   settings_->setValue ("hideAfrica", hideAfrica_);
   settings_->setValue ("hideAntarctica", hideAntarctica_);
   settings_->setValue ("hideAsia", hideAsia_);
@@ -2915,30 +2993,34 @@ void Configuration::impl::write_settings ()
   settings_->setValue ("hideNAmerica", hideNAmerica_);
   settings_->setValue ("hideSAmerica", hideSAmerica_);
   settings_->setValue ("nSingleDecodeAttempts", nsingdecatt_);
-  settings_->setValue ("PTTMethod", QVariant::fromValue (rig_params_.ptt_type));
-  settings_->setValue ("PTTport", rig_params_.ptt_port);
+  if (active_profile_slot_ == 1) {
+    settings_->setValue ("PTTMethod", QVariant::fromValue (rig_params_.ptt_type));
+    settings_->setValue ("PTTport", rig_params_.ptt_port);
+  }
   settings_->setValue ("SaveDir", save_directory_.absolutePath ());
 
-  if (default_audio_input_device_selected_)
-    {
-      settings_->setValue ("SoundInName", QAudioDeviceInfo::defaultInputDevice ().deviceName ());
-    }
-  else
-    {
-      settings_->setValue ("SoundInName", audio_input_device_.deviceName ());
-    }
+  if (active_profile_slot_ == 1) {
+    if (default_audio_input_device_selected_)
+      {
+        settings_->setValue ("SoundInName", QAudioDeviceInfo::defaultInputDevice ().deviceName ());
+      }
+    else
+      {
+        settings_->setValue ("SoundInName", audio_input_device_.deviceName ());
+      }
 
-  if (default_audio_output_device_selected_)
-    {
-      settings_->setValue ("SoundOutName", QAudioDeviceInfo::defaultOutputDevice ().deviceName ());
-    }
-  else
-    {
-      settings_->setValue ("SoundOutName", audio_output_device_.deviceName ());
-    }
+    if (default_audio_output_device_selected_)
+      {
+        settings_->setValue ("SoundOutName", QAudioDeviceInfo::defaultOutputDevice ().deviceName ());
+      }
+    else
+      {
+        settings_->setValue ("SoundOutName", audio_output_device_.deviceName ());
+      }
 
-  settings_->setValue ("AudioInputChannel", AudioDevice::toString (audio_input_channel_));
-  settings_->setValue ("AudioOutputChannel", AudioDevice::toString (audio_output_channel_));
+    settings_->setValue ("AudioInputChannel", AudioDevice::toString (audio_input_channel_));
+    settings_->setValue ("AudioOutputChannel", AudioDevice::toString (audio_output_channel_));
+  }
   settings_->setValue ("Type2MsgGen", QVariant::fromValue (type_2_msg_gen_));
   settings_->setValue ("MonitorOFF", monitor_off_at_startup_);
   settings_->setValue ("MonitorLastUsed", monitor_last_used_);
@@ -2984,15 +3066,17 @@ void Configuration::impl::write_settings ()
   settings_->setValue ("toRTTY", log_as_RTTY_);
   settings_->setValue ("dBtoComments", report_in_comments_);
   settings_->setValue ("distanceToComments", distance_in_comments_);
-  settings_->setValue ("Rig", rig_params_.rig_name);
-  settings_->setValue ("CATTCIPort", rig_params_.tci_port);
-  settings_->setValue ("CATNetworkPort", rig_params_.network_port);
-  settings_->setValue ("CATUSBPort", rig_params_.usb_port);
-  settings_->setValue ("CATSerialPort", rig_params_.serial_port);
-  settings_->setValue ("CATSerialRate", rig_params_.baud);
-  settings_->setValue ("CATDataBits", QVariant::fromValue (rig_params_.data_bits));
-  settings_->setValue ("CATStopBits", QVariant::fromValue (rig_params_.stop_bits));
-  settings_->setValue ("CATHandshake", QVariant::fromValue (rig_params_.handshake));
+  if (active_profile_slot_ == 1) {
+    settings_->setValue ("Rig", rig_params_.rig_name);
+    settings_->setValue ("CATTCIPort", rig_params_.tci_port);
+    settings_->setValue ("CATNetworkPort", rig_params_.network_port);
+    settings_->setValue ("CATUSBPort", rig_params_.usb_port);
+    settings_->setValue ("CATSerialPort", rig_params_.serial_port);
+    settings_->setValue ("CATSerialRate", rig_params_.baud);
+    settings_->setValue ("CATDataBits", QVariant::fromValue (rig_params_.data_bits));
+    settings_->setValue ("CATStopBits", QVariant::fromValue (rig_params_.stop_bits));
+    settings_->setValue ("CATHandshake", QVariant::fromValue (rig_params_.handshake));
+  }
   settings_->setValue ("DataMode", QVariant::fromValue (data_mode_));
   settings_->setValue ("PromptToLog", prompt_to_log_);
   settings_->setValue ("AutoQSOLogging", autolog_);
@@ -3039,13 +3123,15 @@ void Configuration::impl::write_settings ()
   settings_->setValue ("TuneTimer", tunetimer_);
   settings_->setValue ("Tx2QSO", TX_messages_);
   settings_->setValue ("HideTxMessages", hide_TX_messages_);
-  settings_->setValue ("CATForceDTR", rig_params_.force_dtr);
-  settings_->setValue ("DTR", rig_params_.dtr_high);
-  settings_->setValue ("CATForceRTS", rig_params_.force_rts);
-  settings_->setValue ("RTS", rig_params_.rts_high);
-  settings_->setValue ("TXAudioSource", QVariant::fromValue (rig_params_.audio_source));
-  settings_->setValue ("Polling", rig_params_.poll_interval & 0x7fff);
-  settings_->setValue ("SplitMode", QVariant::fromValue (rig_params_.split_mode));
+  if (active_profile_slot_ == 1) {
+    settings_->setValue ("CATForceDTR", rig_params_.force_dtr);
+    settings_->setValue ("DTR", rig_params_.dtr_high);
+    settings_->setValue ("CATForceRTS", rig_params_.force_rts);
+    settings_->setValue ("RTS", rig_params_.rts_high);
+    settings_->setValue ("TXAudioSource", QVariant::fromValue (rig_params_.audio_source));
+    settings_->setValue ("Polling", rig_params_.poll_interval & 0x7fff);
+    settings_->setValue ("SplitMode", QVariant::fromValue (rig_params_.split_mode));
+  }
   settings_->setValue ("Decode52", decode_at_52s_);
   settings_->setValue ("BeepOnMyCall", beepOnMyCall_);
   settings_->setValue ("BeepOnNewCQZ", beepOnNewCQZ_);
@@ -3073,7 +3159,13 @@ void Configuration::impl::write_settings ()
   settings_->setValue ("CalibrationSlopePPM", frequency_calibration_slope_ppm_);
   settings_->setValue ("pwrBandTxMemory", pwrBandTxMemory_);
   settings_->setValue ("pwrBandTuneMemory", pwrBandTuneMemory_);
-  settings_->setValue ("Region", QVariant::fromValue (region_));  
+  settings_->setValue ("Region", QVariant::fromValue (region_));
+
+  // WKjTX: notify the profile manager that the base config has just
+  // been (re-)persisted to JTDX.ini so it can refresh slot 1's baseline.
+  if (active_profile_slot_ == 1) {
+    Q_EMIT self_->base_rig_settings_persisted ();
+  }
 }
 
 void Configuration::impl::set_rig_invariants ()
@@ -3343,6 +3435,65 @@ TransceiverFactory::ParameterPack Configuration::impl::gather_rig_data ()
   result.audio_source = static_cast<TransceiverFactory::TXAudioSource> (ui_->TX_audio_source_button_group->checkedId ());
   result.split_mode = static_cast<TransceiverFactory::SplitMode> (ui_->split_mode_button_group->checkedId ());
   return result;
+}
+
+void Configuration::impl::push_rig_params_to_widgets ()
+{
+  // Reverse of gather_rig_data(): sync the radio-related Settings dialog
+  // widgets to whatever rig_params_ + sibling members currently hold.
+  // The next gather_rig_data() call (typically inside open_rig()) will
+  // therefore see the freshly-applied profile values rather than the
+  // dialog's stale defaults.
+
+  ui_->rig_combo_box->setCurrentText (rig_params_.rig_name);
+
+  // CAT_port_combo_box hosts whichever of {serial,network,usb,tci} port
+  // the selected rig uses. Match the dispatch in gather_rig_data().
+  switch (transceiver_factory_.CAT_port_type (rig_params_.rig_name))
+    {
+    case TransceiverFactory::Capabilities::tci:
+      ui_->CAT_port_combo_box->setCurrentText (rig_params_.tci_port);
+      break;
+    case TransceiverFactory::Capabilities::network:
+      ui_->CAT_port_combo_box->setCurrentText (rig_params_.network_port);
+      break;
+    case TransceiverFactory::Capabilities::usb:
+      ui_->CAT_port_combo_box->setCurrentText (rig_params_.usb_port);
+      break;
+    default:
+      ui_->CAT_port_combo_box->setCurrentText (rig_params_.serial_port);
+      break;
+    }
+
+  ui_->CAT_serial_baud_combo_box->setCurrentText (QString::number (rig_params_.baud));
+  if (auto * b = ui_->CAT_data_bits_button_group->button (rig_params_.data_bits)) b->setChecked (true);
+  if (auto * b = ui_->CAT_stop_bits_button_group->button (rig_params_.stop_bits)) b->setChecked (true);
+  if (auto * b = ui_->CAT_handshake_button_group->button (rig_params_.handshake)) b->setChecked (true);
+
+  if (rig_params_.force_dtr)
+    ui_->force_DTR_combo_box->setCurrentIndex (rig_params_.dtr_high ? 1 : 2);
+  else
+    ui_->force_DTR_combo_box->setCurrentIndex (0);
+
+  if (rig_params_.force_rts)
+    ui_->force_RTS_combo_box->setCurrentIndex (rig_params_.rts_high ? 1 : 2);
+  else
+    ui_->force_RTS_combo_box->setCurrentIndex (0);
+
+  ui_->CAT_poll_interval_spin_box->setValue (rig_params_.poll_interval & 0x7fff);
+  ui_->S_meter_check_box       ->setChecked (do_snr_);
+  ui_->output_power_check_box  ->setChecked (do_pwr_);
+  ui_->rig_power_check_box     ->setChecked (rig_power_);
+  ui_->rig_power_off_check_box ->setChecked (rig_power_off_);
+  ui_->rig_ptt_share_check_box ->setChecked (rig_ptt_share_);
+  if (is_tci_) ui_->tci_audio_check_box->setChecked (tci_audio_);
+
+  if (auto * b = ui_->PTT_method_button_group->button (rig_params_.ptt_type)) b->setChecked (true);
+  if (!rig_params_.ptt_port.isEmpty ())
+    ui_->PTT_port_combo_box->setCurrentText (rig_params_.ptt_port);
+
+  if (auto * b = ui_->TX_audio_source_button_group->button (rig_params_.audio_source)) b->setChecked (true);
+  if (auto * b = ui_->split_mode_button_group->button (rig_params_.split_mode))         b->setChecked (true);
 }
 
 void Configuration::impl::accept ()
@@ -6140,9 +6291,17 @@ bool Configuration::impl::have_rig ()
 
 bool Configuration::impl::open_rig (bool force)
 {
+  // Default path: gather params from the Settings dialog widgets, the
+  // way the original JTDX flow has always done. The profile-switch
+  // path uses the open_rig_with() overload below to bypass the UI
+  // scrape entirely.
+  return open_rig_with (gather_rig_data (), force);
+}
+
+bool Configuration::impl::open_rig_with (TransceiverFactory::ParameterPack const & rig_data, bool force)
+{
   auto result = false;
 
-  auto const rig_data = gather_rig_data ();
   if (force || !rig_active_ || rig_data != saved_rig_params_)
     {
       try
@@ -6197,7 +6356,11 @@ bool Configuration::impl::open_rig (bool force)
           rig_active_ = true;
 //    printf("%s(%0.1f) Configuration rig_open, start transceiver #:%d\n",jtdxtime_->currentDateTimeUtc2().toString("hh:mm:ss.zzz").toStdString().c_str(),jtdxtime_->GetOffset(),transceiver_command_number_+1);
           Q_EMIT start_transceiver (++transceiver_command_number_,jtdxtime_); // start rig on its thread
-          rig_params_ = gather_rig_data ();
+          // Snapshot the params we just opened the rig with so future
+          // open_rig() comparisons (rig_data != saved_rig_params_) work
+          // even when the caller bypassed the UI scrape via
+          // open_rig_with().
+          rig_params_ = rig_data;
           result = true;
         }
       catch (std::exception const& e)

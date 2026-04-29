@@ -305,6 +305,27 @@ public:
   void snapshotRadioToSettings (QSettings & dest) const;
   void applyRadioFromSettings  (QSettings & src);
 
+  // WKjTX profile manager bookkeeping. Tells write_settings() whether to
+  // persist rig/audio fields to the main JTDX.ini. Set to 1 when the
+  // base config is live; >=2 when an overlay profile is active. The
+  // overlay's own slotN.ini is the source of truth while it is active.
+  void setActiveProfileSlot (int slot);
+  int  activeProfileSlot () const;
+
+  // Force-reopen the rig using the live rig_params_ directly, bypassing
+  // the Settings dialog UI scrape that the regular transceiver_online()
+  // path goes through. Used by ProfileManager::switchToSlot() so the
+  // hardware gets the exact values just loaded from the slot INI rather
+  // than whatever the dialog widgets currently happen to show.
+  bool reopenRigWithCurrentParams ();
+
+  // Direct access to the live rig parameter pack. ProfileManager uses
+  // this to capture a slot 1 baseline at startup (kept in memory, no
+  // INI round-trip required) and to restore that baseline when the
+  // user clicks the slot 1 button after working on an overlay profile.
+  TransceiverFactory::ParameterPack currentRigParams () const;
+  void setRigParams (TransceiverFactory::ParameterPack const & params);
+
   // List of all rig names supported by the bundled hamlib build,
   // safe to call from anywhere — re-uses Configuration's own
   // TransceiverFactory rather than spinning up a second one (which
@@ -431,6 +452,11 @@ public:
   // re-established with a call to transceiver_online(true) assuming
   // the fault condition has been rectified or is transient.
   Q_SIGNAL void transceiver_failure (QString const& reason) const;
+
+  // WKjTX: emitted at the end of every write_settings() that was allowed
+  // to persist rig/audio fields (i.e. ran while slot 1 was active).
+  // ProfileManager listens so it can refresh the slot 1 baseline INI.
+  Q_SIGNAL void base_rig_settings_persisted () const;
 
 private:
   class impl;
