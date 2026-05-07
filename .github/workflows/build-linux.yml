@@ -57,8 +57,11 @@ jobs:
             libfftw3-dev \
             libboost-all-dev \
             libusb-1.0-0-dev \
+            asciidoc \
             asciidoctor \
             ruby-asciidoctor-pdf \
+            xmlto \
+            docbook-xsl \
             file \
             rpm \
             fakeroot
