@@ -66,7 +66,12 @@ jobs:
       - name: Build JTDX-Hamlib (static)
         run: |
           cd third-party/jtdxhamlib
-          ./bootstrap
+          # The vendored Hamlib tree was committed from a Windows host
+          # (NTFS has no exec bit), so git records bootstrap as 100644.
+          # Make it executable on the Linux runner before invoking it.
+          chmod +x bootstrap
+          find . -maxdepth 2 -name "*.sh" -exec chmod +x {} +
+          bash ./bootstrap
           mkdir -p build && cd build
           ../configure \
             --prefix="${GITHUB_WORKSPACE}/build-artifacts/hamlib" \

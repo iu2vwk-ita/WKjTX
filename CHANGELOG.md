@@ -8,6 +8,33 @@ upstream JTDX version is preserved in internal Versions.cmake
 for code compatibility, but public releases are tagged
 `v0.1.0` → `v1.0.0` reflecting WKjTX's own delivery phases.
 
+## [v1.2.3] — 2026-05-07 — First Linux release
+
+### Added
+- **Linux build** — WKjTX now builds and ships for Linux x86_64
+  alongside Windows. New GitHub Actions workflow
+  (`.github/workflows/build-linux.yml`) runs on Ubuntu 22.04 with
+  Qt5 + qwt + fftw + boost + gfortran from the distro repos and a
+  locally-built static JTDX-Hamlib. On `v*` tags it produces three
+  packages via cpack:
+  - `.tar.gz` (distro-agnostic install tree)
+  - `.deb` (Debian / Ubuntu)
+  - `.rpm` (Fedora / openSUSE / RHEL)
+- **Single release per tag for both OSes** — new
+  `.github/workflows/release-linux.yml` attaches the Linux packages
+  to the same draft GitHub Release that the Windows pipeline already
+  creates, so each tag yields one release page with both OS payloads.
+- **Landing page now advertises both Windows and Linux** — accurate
+  "installer or portable" copy replaces the old "no installer / portable
+  only" claim across hero, feature card, micro list, CTAs, `<title>`,
+  og:title, twitter:title and meta description.
+
+### Notes
+- No source changes to WKjTX behavior versus v1.2.2; the version bump
+  exists to trigger the new Linux build pipeline and unify the Windows
+  + Linux release page. Windows users on v1.2.2 do not need to update
+  unless they want to switch to a Linux box.
+
 ## [v1.2.2] — 2026-04-29 — Minor installer bug fix
 
 ### Fixed
