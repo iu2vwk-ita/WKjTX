@@ -57,6 +57,9 @@ jobs:
             libfftw3-dev \
             libboost-all-dev \
             libusb-1.0-0-dev \
+            libudev-dev \
+            libpulse-dev \
+            libasound2-dev \
             asciidoc \
             asciidoctor \
             ruby-asciidoctor-pdf \
