@@ -92,10 +92,16 @@ jobs:
         run: |
           cd jtdx-source
           mkdir -p build-wkjtx-linux && cd build-wkjtx-linux
+          # Without CMAKE_RUNTIME_OUTPUT_DIRECTORY the linker writes the
+          # `wkjtx` executable into the build root, where add_subdirectory
+          # (wkjtx) has already created a `wkjtx/` folder for the WKjTX
+          # modules — name collision, ld errors with "Is a directory" on
+          # Linux. (Windows is unaffected because the binary is wkjtx.exe.)
           cmake -G Ninja \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_PREFIX_PATH="${GITHUB_WORKSPACE}/build-artifacts/hamlib" \
             -DCMAKE_INSTALL_PREFIX=/usr \
+            -DCMAKE_RUNTIME_OUTPUT_DIRECTORY=bin \
             -DWKJTX_BUILD_TESTS=ON \
             -DWSJT_GENERATE_DOCS=OFF \
             -DCMAKE_Fortran_FLAGS="-fallow-argument-mismatch" \
@@ -138,5 +144,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: wkjtx-linux-build
-          path: jtdx-source/build-wkjtx-linux/wkjtx
+          path: jtdx-source/build-wkjtx-linux/bin/wkjtx
           if-no-files-found: warn
