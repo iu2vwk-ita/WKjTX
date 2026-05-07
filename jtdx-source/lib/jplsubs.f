@@ -699,6 +699,14 @@ C
 
       LOGICAL KM,BARY
 
+C     gfortran 14+ adds an intrinsic SPLIT (Fortran 2023) that shadows
+C     the user-defined SPLIT subroutine in this file (line 536). Without
+C     an EXTERNAL declaration the compiler resolves CALL SPLIT(...) to
+C     the F2023 intrinsic and rejects the call as missing the 'pos'
+C     argument. Declaring SPLIT as EXTERNAL forces resolution to the
+C     local subroutine on every gfortran version.
+      EXTERNAL SPLIT
+
       COMMON/EPHHDR/CVAL,SS,AU,EMRAT,NUMDE,NCON,IPT
       COMMON/CHRHDR/CNAM,TTL
       COMMON/STCOMX/KM,BARY,PVSUN
