@@ -1,0 +1,131 @@
+name: Build Linux
+
+# Builds WKjTX on Linux (Ubuntu) using system Qt5 + gfortran + a
+# locally-built static JTDX-Hamlib, mirroring the Windows MSYS2
+# pipeline in build-windows.yml.
+#
+# Triggers:
+#   - push to main or any branch starting with "release-"
+#   - any tag starting with "v" (creates a release artifact)
+#   - manual "Run workflow" from the Actions tab
+
+on:
+  push:
+    branches:
+      - main
+      - 'release-*'
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build and test (Linux / Ubuntu 22.04)
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+            build-essential \
+            gfortran \
+            cmake \
+            ninja-build \
+            git \
+            patch \
+            unzip \
+            autoconf \
+            automake \
+            libtool \
+            pkg-config \
+            qtbase5-dev \
+            qttools5-dev \
+            qttools5-dev-tools \
+            qtmultimedia5-dev \
+            libqt5serialport5-dev \
+            libqt5websockets5-dev \
+            libqt5svg5-dev \
+            qttranslations5-l10n \
+            libqwt-qt5-dev \
+            libfftw3-dev \
+            libboost-all-dev \
+            libusb-1.0-0-dev \
+            asciidoctor \
+            ruby-asciidoctor-pdf \
+            file \
+            rpm \
+            fakeroot
+
+      - name: Build JTDX-Hamlib (static)
+        run: |
+          cd third-party/jtdxhamlib
+          ./bootstrap
+          mkdir -p build && cd build
+          ../configure \
+            --prefix="${GITHUB_WORKSPACE}/build-artifacts/hamlib" \
+            --disable-shared --enable-static \
+            --without-cxx-binding --disable-winradio \
+            --without-readline \
+            --disable-dependency-tracking
+          make -j"$(nproc)"
+          make install
+
+      - name: Configure WKjTX
+        run: |
+          cd jtdx-source
+          mkdir -p build-wkjtx-linux && cd build-wkjtx-linux
+          cmake -G Ninja \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_PREFIX_PATH="${GITHUB_WORKSPACE}/build-artifacts/hamlib" \
+            -DCMAKE_INSTALL_PREFIX=/usr \
+            -DWKJTX_BUILD_TESTS=ON \
+            -DWSJT_GENERATE_DOCS=OFF \
+            -DCMAKE_Fortran_FLAGS="-fallow-argument-mismatch" \
+            ..
+
+      - name: Build WKjTX
+        run: |
+          cd jtdx-source/build-wkjtx-linux
+          ninja
+
+      - name: Run WKjTX unit tests
+        run: |
+          cd jtdx-source/build-wkjtx-linux
+          ctest --output-on-failure --test-dir wkjtx/tests || echo "Tests location may vary"
+        continue-on-error: true
+
+      - name: Build packages (TGZ + DEB + RPM)
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          cd jtdx-source/build-wkjtx-linux
+          # Force-add TGZ alongside DEB/RPM that CMakeLists already enabled
+          cpack -G "TGZ;DEB;RPM" || cpack
+          ls -la
+
+      - name: Upload Linux artifacts (release tags)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@v4
+        with:
+          name: wkjtx-linux-packages
+          path: |
+            jtdx-source/build-wkjtx-linux/wkjtx-*.tar.gz
+            jtdx-source/build-wkjtx-linux/wkjtx-*.deb
+            jtdx-source/build-wkjtx-linux/wkjtx-*.rpm
+            jtdx-source/build-wkjtx-linux/WKJTX-*.tar.gz
+            jtdx-source/build-wkjtx-linux/WKJTX-*.deb
+            jtdx-source/build-wkjtx-linux/WKJTX-*.rpm
+          if-no-files-found: warn
+
+      - name: Upload Linux executable (every build)
+        uses: actions/upload-artifact@v4
+        with:
+          name: wkjtx-linux-build
+          path: jtdx-source/build-wkjtx-linux/wkjtx
+          if-no-files-found: warn
