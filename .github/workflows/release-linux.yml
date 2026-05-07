@@ -46,7 +46,7 @@ jobs:
           generate_release_notes: false
           append_body: true
           files: |
-            linux/*.tar.gz
-            linux/*.deb
-            linux/*.rpm
+            linux/wkjtx*.tar.gz
+            linux/wkjtx*.deb
+            linux/wkjtx*.rpm
             linux/SHA256SUMS-linux.txt

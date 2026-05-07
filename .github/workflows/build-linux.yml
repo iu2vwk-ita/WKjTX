@@ -131,10 +131,16 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: wkjtx-linux-packages
+          # cpack DEB generator uses underscore convention
+          # (wkjtx_1.2.3_amd64.deb) while RPM/TGZ use hyphens
+          # (wkjtx-1.2.3.x86_64.rpm / wkjtx-1.2.3-Linux.tar.gz). Glob
+          # both styles to avoid silently dropping the .deb.
           path: |
             jtdx-source/build-wkjtx-linux/wkjtx-*.tar.gz
             jtdx-source/build-wkjtx-linux/wkjtx-*.deb
+            jtdx-source/build-wkjtx-linux/wkjtx_*.deb
             jtdx-source/build-wkjtx-linux/wkjtx-*.rpm
+            jtdx-source/build-wkjtx-linux/wkjtx_*.rpm
             jtdx-source/build-wkjtx-linux/WKJTX-*.tar.gz
             jtdx-source/build-wkjtx-linux/WKJTX-*.deb
             jtdx-source/build-wkjtx-linux/WKJTX-*.rpm
