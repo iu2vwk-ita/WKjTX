@@ -555,6 +555,9 @@ MainWindow::MainWindow(bool multiple, QSettings * settings, QSharedMemory *shdme
   connect (this, &MainWindow::endTransmitMessage, m_modulator, &Modulator::stop);
   connect (this, &MainWindow::tune, m_modulator, &Modulator::tune);
   connect (this, &MainWindow::sendMessage, m_modulator, &Modulator::start);
+  connect (m_modulator, QOverload<Modulator::ModulatorState>::of(&Modulator::stateChanged), this, [this](Modulator::ModulatorState state) {
+    if(state == Modulator::Idle && m_transmitting) stopTx();
+  });
   connect (&m_audioThread, &QThread::finished, m_modulator, &QObject::deleteLater);
 
   // hook up the audio input stream signals, slots and disposal
