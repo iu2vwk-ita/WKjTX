@@ -8,6 +8,26 @@ upstream JTDX version is preserved in internal Versions.cmake
 for code compatibility, but public releases are tagged
 `v0.1.0` → `v1.0.0` reflecting WKjTX's own delivery phases.
 
+## [v1.3.0] — 2026-06-30 — Hamlib REST API integration
+
+### Added
+- **Hamlib REST API** — NEW rig type "Hamlib REST API" for radio control
+  via the HTTP REST API (github.com/DL4OCE/hamlib_rest_api). Replaces
+  OmniRig/Hamlib with HTTP calls for PTT, frequency, mode, and split.
+- **RESTTransceiver** — New `RESTTransceiver` class in the transceiver
+  engine. Polls frequency + PTT via HTTP GET; sets PTT/freq/mode via
+  HTTP POST.
+- **Radio profile support** — Host, port, and TRX ID configurable per
+  profile slot (Radio 1/2/3) via RadioProfileDialog.
+- **Profile switch fix** — `m_tci` flag is now refreshed after switching
+  profiles, preventing stale TCI state for mixed TCI/non-TCI profiles.
+
+### Fixed
+- **Run-time DLL conflicts** — run.bat now launches from the build
+  artifact directory so Qt5 DLLs (from the bundled portable release)
+  are loaded before any system-installed Qt5, preventing
+  STATUS_ENTRYPOINT_NOT_FOUND on systems with multiple Qt installations.
+
 ## [v1.2.3] — 2026-05-07 — First Linux release
 
 ### Added

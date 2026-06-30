@@ -16,8 +16,8 @@
 # (see CMake/VersionCompute.cmake). It is NOT the patch number.
 # WSJTX_VERSION_SUB is the real patch field. Keep 32A at 0 for WKjTX.
 set (WSJTX_VERSION_MAJOR 1)
-set (WSJTX_VERSION_MINOR 2)
+set (WSJTX_VERSION_MINOR 3)
 set (WSJTX_VERSION_32A 0)
-set (WSJTX_VERSION_SUB 4)
+set (WSJTX_VERSION_SUB 0)
 set (WSJTX_RC 0)		 # release candidate number, comment out or zero for development versions
 set (WSJTX_VERSION_IS_RELEASE 1) # set to 1 for final release build
