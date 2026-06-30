@@ -3344,6 +3344,8 @@ void MainWindow::createProfileButtons ()
     [this] (int newSlot) {
       for (int i = 0; i < 3; ++i)
         m_profileBtn[i]->setActive (i + 1 == newSlot);
+      // Refresh TCI flag — profile switch may have changed rig type
+      m_tci = m_config.tci_audio () && m_config.is_tci ();
       if (m_config.restart_audio_input () && !m_config.audio_input_device ().isNull ())
         Q_EMIT startAudioInputStream (m_config.audio_input_device (),
                  m_rx_audio_buffer_frames, m_detector,

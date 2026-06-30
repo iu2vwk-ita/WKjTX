@@ -7,6 +7,7 @@
 #include "DXLabSuiteCommanderTransceiver.hpp"
 #include "HRDTransceiver.hpp"
 #include "EmulateSplitTransceiver.hpp"
+#include "RESTTransceiver.hpp"
 
 #if defined (WIN32)
 #include "OmniRigTransceiver.hpp"
@@ -31,6 +32,7 @@ namespace
       , HRDId
       , OmniRigOneId
       , OmniRigTwoId
+      , RESTApiId
     };
 }
 
@@ -40,6 +42,7 @@ TransceiverFactory::TransceiverFactory ()
   TCITransceiver::register_transceivers (&transceivers_, TCI1Id, TCI2Id);
   DXLabSuiteCommanderTransceiver::register_transceivers (&transceivers_, CommanderId);
   HRDTransceiver::register_transceivers (&transceivers_, HRDId);
+  RESTTransceiver::register_transceivers (&transceivers_, RESTApiId);
   
 #if defined (WIN32)
   // OmniRig is ActiveX/COM server so only on Windows
@@ -204,6 +207,19 @@ std::unique_ptr<Transceiver> TransceiverFactory::create (ParameterPack const& pa
       }
       break;
 #endif
+
+    case RESTApiId:
+      {
+        result.reset (new RESTTransceiver {params.rest_host.isEmpty () ? QStringLiteral ("localhost") : params.rest_host
+                                          , static_cast<quint16> (params.rest_port ? params.rest_port : 8080)
+                                          , params.rest_trx_id ? params.rest_trx_id : 1
+                                          , params.poll_interval});
+        if (target_thread)
+          {
+            result->moveToThread (target_thread);
+          }
+      }
+      break;
 
     default:
       result.reset (new HamlibTransceiver {supported_transceivers ()[params.rig_name].model_number_, params});

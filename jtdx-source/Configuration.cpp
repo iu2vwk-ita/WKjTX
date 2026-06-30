@@ -1284,6 +1284,9 @@ void Configuration::snapshotRadioToSettings (QSettings & dest) const
   dest.setValue ("RigPower",           m.rig_power_);
   dest.setValue ("RigPower_off",       m.rig_power_off_);
   dest.setValue ("RigShare_ptt",       m.rig_ptt_share_);
+  dest.setValue ("RESTHost",           m.rig_params_.rest_host);
+  dest.setValue ("RESTPort",           m.rig_params_.rest_port);
+  dest.setValue ("RESTTrxId",          m.rig_params_.rest_trx_id);
   dest.sync ();
 }
 
@@ -1329,6 +1332,9 @@ void Configuration::applyRadioFromSettings (QSettings & src)
   m.rig_power_                = src.value ("RigPower",         m.rig_power_).toBool ();
   m.rig_power_off_            = src.value ("RigPower_off",     m.rig_power_off_).toBool ();
   m.rig_ptt_share_            = src.value ("RigShare_ptt",     m.rig_ptt_share_).toBool ();
+  m.rig_params_.rest_host    = src.value ("RESTHost",         m.rig_params_.rest_host).toString ();
+  m.rig_params_.rest_port    = static_cast<quint16> (src.value ("RESTPort",        m.rig_params_.rest_port).toUInt ());
+  m.rig_params_.rest_trx_id  = src.value ("RESTTrxId",        m.rig_params_.rest_trx_id).toInt ();
 
   QString const newIn  = src.value ("SoundInName").toString ();
   QString const newOut = src.value ("SoundOutName").toString ();
@@ -3434,6 +3440,9 @@ TransceiverFactory::ParameterPack Configuration::impl::gather_rig_data ()
   result.ptt_port = ui_->PTT_port_combo_box->currentText ();
   result.audio_source = static_cast<TransceiverFactory::TXAudioSource> (ui_->TX_audio_source_button_group->checkedId ());
   result.split_mode = static_cast<TransceiverFactory::SplitMode> (ui_->split_mode_button_group->checkedId ());
+  result.rest_host   = rig_params_.rest_host;
+  result.rest_port   = rig_params_.rest_port;
+  result.rest_trx_id = rig_params_.rest_trx_id;
   return result;
 }
 
@@ -3494,6 +3503,7 @@ void Configuration::impl::push_rig_params_to_widgets ()
 
   if (auto * b = ui_->TX_audio_source_button_group->button (rig_params_.audio_source)) b->setChecked (true);
   if (auto * b = ui_->split_mode_button_group->button (rig_params_.split_mode))         b->setChecked (true);
+  // REST API fields are configured via RadioProfileDialog, not main UI
 }
 
 void Configuration::impl::accept ()

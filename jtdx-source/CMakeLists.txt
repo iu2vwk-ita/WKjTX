@@ -198,6 +198,7 @@ set (wsjt_qt_CXXSRCS
   TCITransceiver.cpp
   HRDTransceiver.cpp
   DXLabSuiteCommanderTransceiver.cpp
+  RESTTransceiver.cpp
   NetworkMessage.cpp
   MessageClient.cpp
   LettersSpinBox.cpp
