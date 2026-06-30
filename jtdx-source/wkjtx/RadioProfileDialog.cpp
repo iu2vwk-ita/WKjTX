@@ -131,6 +131,22 @@ RadioProfileDialog::RadioProfileDialog (int slot, QString const & iniPath,
   audioForm->addRow (tr ("TX Audio Source:"), txAudioCombo_);
   main->addWidget (audioBox);
 
+  // ── REST API (hamlib_rest_api) ───────────────────────────────────────
+  auto * restBox  = new QGroupBox (tr ("Hamlib REST API"), this);
+  auto * restForm = new QFormLayout (restBox);
+  restHostEdit_ = new QLineEdit (this);
+  restHostEdit_->setPlaceholderText (tr ("localhost"));
+  restForm->addRow (tr ("Host:"), restHostEdit_);
+  restPortSpin_ = new QSpinBox (this);
+  restPortSpin_->setRange (1, 65535);
+  restPortSpin_->setValue (8080);
+  restForm->addRow (tr ("Port:"), restPortSpin_);
+  restTrxIdSpin_ = new QSpinBox (this);
+  restTrxIdSpin_->setRange (1, 99);
+  restTrxIdSpin_->setValue (1);
+  restForm->addRow (tr ("TRX ID:"), restTrxIdSpin_);
+  main->addWidget (restBox);
+
   // ── Buttons ──────────────────────────────────────────────────────────
   auto * buttons = new QDialogButtonBox (
     QDialogButtonBox::Save | QDialogButtonBox::Cancel, this);
@@ -219,6 +235,10 @@ void RadioProfileDialog::loadFromIni ()
   int txi = txAudioCombo_->findData (
     ini.value ("TXAudioSource", TransceiverFactory::TX_audio_source_rear).toInt ());
   if (txi >= 0) txAudioCombo_->setCurrentIndex (txi);
+
+  restHostEdit_->setText (ini.value ("RESTHost").toString ());
+  restPortSpin_->setValue (ini.value ("RESTPort", 8080).toUInt ());
+  restTrxIdSpin_->setValue (ini.value ("RESTTrxId", 1).toInt ());
 }
 
 void RadioProfileDialog::saveToIni ()
@@ -245,6 +265,9 @@ void RadioProfileDialog::saveToIni ()
   ini.setValue ("SoundOutName",        audioOutCombo_->currentText ());
   ini.setValue ("AudioOutputChannel",  audioOutChCombo_->currentText ());
   ini.setValue ("TXAudioSource",       txAudioCombo_->currentData ().toInt ());
+  ini.setValue ("RESTHost",            restHostEdit_->text ());
+  ini.setValue ("RESTPort",            restPortSpin_->value ());
+  ini.setValue ("RESTTrxId",           restTrxIdSpin_->value ());
   ini.sync ();
 }
 

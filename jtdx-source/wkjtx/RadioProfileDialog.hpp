@@ -67,6 +67,11 @@ private:
   QComboBox * audioOutCombo_  {nullptr};
   QComboBox * audioOutChCombo_{nullptr};
   QComboBox * txAudioCombo_   {nullptr};
+
+  // REST API fields
+  QLineEdit * restHostEdit_   {nullptr};
+  QSpinBox  * restPortSpin_   {nullptr};
+  QSpinBox  * restTrxIdSpin_  {nullptr};
 };
 
 } // namespace wkjtx

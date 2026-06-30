@@ -124,6 +124,9 @@ public:
                                 // value "CAT"
     int poll_interval;          // in seconds for interfaces that
                                 // require polling for state changes
+    QString rest_host;          // Hamlib REST API hostname
+    quint16 rest_port;          // Hamlib REST API port
+    int rest_trx_id;            // Hamlib REST API transceiver ID
 
     bool operator == (ParameterPack const& rhs) const
     {
@@ -145,6 +148,9 @@ public:
         && rhs.split_mode == split_mode
         && rhs.ptt_port == ptt_port
         && rhs.poll_interval == poll_interval
+        && rhs.rest_host == rest_host
+        && rhs.rest_port == rest_port
+        && rhs.rest_trx_id == rest_trx_id
         ;
     }
   };
