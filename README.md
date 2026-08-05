@@ -1,12 +1,12 @@
 # WKjTX
 
-**Weak-signal HF digital modes for Windows.** WKjTX 1.2 is a freeware
+**Weak-signal HF digital modes for Windows.** WKjTX 1.3 is a freeware
 fork of [JTDX](https://sourceforge.net/p/jtdx/), itself forked from
 [WSJT-X](https://wsjt.sourceforge.io/wsjtx.html) (K1JT). It speaks
 FT8, FT4, JT65, JT9, JT9+JT65, T10 and WSPR-2 — same decoders, same
 operating modes as upstream.
 
-## What's new in 1.2 — qrz.com Logbook · Auto-CQ · NTP time sync
+## What's new in 1.3 — Hamlib REST API · Radio quick-switch · Auto-call
 
 ### qrz.com Logbook upload + download
 
@@ -48,6 +48,21 @@ Right-click for optional 10-min auto-sync install.
   companion tools (Stream Deck plugin, external keyers).
 - **UPDATE DATA TLS fix** — one-click refresh works on fresh
   portable installs again.
+
+### What's new in 1.3
+
+- **Hamlib REST API transceiver** — control your radio over HTTP
+  via `rigctld --rest-api`. Supports frequency, mode, PTT, split,
+  and polling — full Tx/Rx sequencing identical to serial CAT.
+- **Radio profile quick-switch** — 3 profiles in the menubar corner
+  (e.g. Home / Portable / Mobile). Click to swap rig, CAT port, audio
+  devices, PTT method instantly.
+- **Auto-call** — *File → Auto-call...* opens a dialog with 7 triggers:
+  new DXCC, new band, new zone, new grid, spotted, needed, never
+  worked. Auto-enables TX on matching decode.
+- **IC-705 PTT fix** — CI-V PTT OFF now works correctly. Hamlib caps
+  were missing `set_ptt`/`get_ptt`, leaving the radio stuck in
+  transmit after FT8.
 
 ### Earlier releases
 
