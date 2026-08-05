@@ -7176,8 +7176,7 @@ ncboolean newcat_valid_command(RIG *rig, char const *const command)
     is_ftdx3000dm = newcat_get_rigid(rig) == 462;
     is_ftdx101d = newcat_is_rig(rig, RIG_MODEL_FTDX101D);
     is_ftdx101mp = newcat_is_rig(rig, RIG_MODEL_FTDX101MP);
-    is_ftdx10 = newcat_is_rig(rig, RIG_MODEL_FTDX10)
-                || newcat_is_rig(rig, RIG_MODEL_FTX1);
+    is_ftdx10 = newcat_is_rig(rig, RIG_MODEL_FTDX10);
 
     if (!is_ft450 && !is_ft950 && !is_ft891 && !is_ft991 && !is_ft2000
             && !is_ftdx5000 && !is_ftdx9000 && !is_ftdx1200 && !is_ftdx3000 && !is_ftdx101d
@@ -7359,7 +7358,6 @@ int newcat_set_tx_vfo(RIG *rig, vfo_t tx_vfo)
             newcat_is_rig(rig, RIG_MODEL_FTDX1200) ||
             newcat_is_rig(rig, RIG_MODEL_FT991) ||
             newcat_is_rig(rig, RIG_MODEL_FTDX10) ||
-            newcat_is_rig(rig, RIG_MODEL_FTX1) ||
             newcat_is_rig(rig, RIG_MODEL_FTDX3000))
     {
         TRACE;

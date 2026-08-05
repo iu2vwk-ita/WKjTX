@@ -1010,9 +1010,19 @@ set (LANGUAGES
   zh_HK
   )
 foreach (lang_ ${LANGUAGES})
-  file (TO_NATIVE_PATH build-wkjtx/jtdx_${lang_}.qm qm_)
-  list (APPEND QM_FILES ${qm_})
+  file (TO_NATIVE_PATH translations/jtdx_${lang_}.ts ts_)
+  list (APPEND TS_FILES ${ts_})
 endforeach ()  
+if (UPDATE_TRANSLATIONS)
+  message (STATUS "UPDATE_TRANSLATIONS option is set.")
+  qt5_create_translation (
+    QM_FILES ${wsjt_qt_UISRCS} ${wsjtx_UISRCS} ${wsjt_qt_CXXSRCS} ${wsjtx_CXXSRCS}
+    ${TS_FILES}
+    OPTIONS -source-language en_US
+    )
+else ()
+  qt5_add_translation (QM_FILES ${TS_FILES})
+endif ()
 add_custom_target (translations DEPENDS ${QM_FILES})
 set_property (DIRECTORY PROPERTY CLEAN_NO_CUSTOM TRUE)
 # do this after i18n to stop lupdate walking the boost tree which it

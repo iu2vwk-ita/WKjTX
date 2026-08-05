@@ -1281,9 +1281,6 @@ const struct rig_caps ic705_caps =
     .is_async_frame = icom_is_async_frame,
     .process_async_frame = icom_process_async_frame,
 
-    .set_ptt =  icom_set_ptt,
-    .get_ptt =  icom_get_ptt,
-
     .cfgparams =  icom_cfg_params,
     .set_conf =  icom_set_conf,
     .get_conf =  icom_get_conf,
