@@ -233,6 +233,34 @@ if [ $NINJA_RC -ne 0 ]; then
   exit $NINJA_RC
 fi
 
+# Deploy the Qt and toolchain runtime next to the binaries, so wkjtx.exe
+# and the jt9 decoder start from the build directory without MSYS2 on
+# PATH. windeployqt brings Qt DLLs and plugins; it does NOT bring the
+# GCC/Fortran runtime, nor the FFTW threading library that only the
+# decoder links, so the ldd sweep below fills those in. Runs over every
+# .exe, not just wkjtx.exe: a missing DLL in the decoder shows up as
+# "Subprocess error / Process crashed" at the first decode cycle.
+log "Deploying Qt + toolchain runtime into $WKJTX_BUILD ..."
+if [ -x /mingw64/bin/windeployqt-qt5.exe ]; then
+  /mingw64/bin/windeployqt-qt5.exe --release --compiler-runtime     --no-translations "$WKJTX_BUILD/wkjtx.exe" >/dev/null || true
+fi
+( cd "$WKJTX_BUILD"
+  # Repeat until no new DLL appears: dependencies are transitive.
+  for _pass in 1 2 3 4; do
+    for f in *.exe *.dll; do
+      [ -e "$f" ] || continue
+      # grep exits 1 when a DLL has no /mingw64 dependency at all, which
+      # under `set -e` would abort the whole build — hence the `|| true`.
+      ldd "$f" 2>/dev/null | grep -iF "=> /mingw64/bin" | awk '{print $3}' |
+      while read -r dep; do
+        base=$(basename "$dep")
+        [ -f "./$base" ] || cp "$dep" ./
+      done || true
+    done
+  done
+  log "Runtime deployed: $(ls -1 *.dll 2>/dev/null | wc -l) DLLs alongside wkjtx.exe"
+)
+
 # Stage runtime data files into the directory the binary expects at
 # launch time (same layout `ninja install` would produce, but in-place
 # so the user can run wkjtx.exe directly from the build dir).
