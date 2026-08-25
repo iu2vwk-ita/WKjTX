@@ -544,6 +544,11 @@ private:
   Q_SLOT void on_eqslnick_edit_textEdited(const QString &arg1);
   Q_SLOT void on_qrz_api_key_edit_textEdited(const QString &arg1);
   Q_SLOT void on_qrz_help_button_clicked();
+  Q_SLOT void on_clublog_api_key_edit_textEdited(const QString &arg1);
+  Q_SLOT void on_clublog_email_edit_textEdited(const QString &arg1);
+  Q_SLOT void on_clublog_password_edit_textEdited(const QString &arg1);
+  Q_SLOT void on_clublog_help_button_clicked();
+  void update_clublog_enable_state ();
 
   Q_SLOT void on_pbCQmsg_clicked();
   Q_SLOT void on_pbMyCall_clicked();
@@ -790,6 +795,13 @@ private:
   int     qrz_upload_mode_;   // 0 = Auto, 1 = Manual
   int     eqsl_upload_mode_;  // 0 = Auto, 1 = Manual
   QDateTime qrz_last_fetch_;
+  // v1.4.0: Club Log real-time upload.
+  bool    send_to_clublog_;
+  QString clublog_email_;
+  QString clublog_password_;
+  QString clublog_callsign_;
+  QString clublog_api_key_;
+  int     clublog_upload_mode_;   // 0 = Auto, 1 = Manual
   bool usesched_;
   QString sched_hh_1_;
   QString sched_mm_1_;
@@ -1064,6 +1076,12 @@ QString Configuration::qrz_api_key ()      const {return m_->qrz_api_key_;}
 int     Configuration::qrz_upload_mode ()  const {return m_->qrz_upload_mode_;}
 int     Configuration::eqsl_upload_mode () const {return m_->eqsl_upload_mode_;}
 QDateTime Configuration::qrz_last_fetch () const {return m_->qrz_last_fetch_;}
+bool    Configuration::send_to_clublog ()     const {return m_->send_to_clublog_;}
+QString Configuration::clublog_email ()       const {return m_->clublog_email_;}
+QString Configuration::clublog_password ()    const {return m_->clublog_password_;}
+QString Configuration::clublog_callsign ()    const {return m_->clublog_callsign_;}
+QString Configuration::clublog_api_key ()     const {return m_->clublog_api_key_;}
+int     Configuration::clublog_upload_mode () const {return m_->clublog_upload_mode_;}
 void Configuration::set_qrz_last_fetch (QDateTime const & v)
 {
   m_->qrz_last_fetch_ = v;
@@ -2238,6 +2256,19 @@ Radio::convert_dark("#fafbfe",useDarkStyle_),Radio::convert_dark("#dcdef1",useDa
   ui_->qrz_check_box->setChecked (send_to_qrz_ && !qrz_api_key_.isEmpty ());
   ui_->qrz_mode_combo->setCurrentIndex  (qrz_upload_mode_  == 1 ? 1 : 0);
   ui_->eqsl_mode_combo->setCurrentIndex (eqsl_upload_mode_ == 1 ? 1 : 0);
+  // v1.4.0: Club Log widgets.
+  ui_->clublog_email_edit->setText (clublog_email_);
+  ui_->clublog_password_edit->setText (clublog_password_);
+  ui_->clublog_callsign_edit->setText (clublog_callsign_);
+  ui_->clublog_api_key_edit->setText (clublog_api_key_);
+  {
+    bool const usable = !clublog_api_key_.isEmpty ()
+                     && !clublog_email_.isEmpty ()
+                     && !clublog_password_.isEmpty ();
+    ui_->clublog_check_box->setEnabled (usable);
+    ui_->clublog_check_box->setChecked (send_to_clublog_ && usable);
+  }
+  ui_->clublog_mode_combo->setCurrentIndex (clublog_upload_mode_ == 1 ? 1 : 0);
   next_frequencies_.frequency_list (frequencies_.frequency_list ());
   ui_->UseSched_check_box->setChecked (usesched_);
   ui_->hhComboBox_1->setCurrentText (sched_hh_1_);
@@ -2676,6 +2707,13 @@ void Configuration::impl::read_settings ()
   qrz_api_key_      = settings_->value ("QRZApiKey",    "").toString ();
   qrz_upload_mode_  = settings_->value ("QRZUploadMode",  0).toInt ();
   eqsl_upload_mode_ = settings_->value ("EQSLUploadMode", 0).toInt ();
+  // v1.4.0: Club Log real-time upload.
+  send_to_clublog_     = settings_->value ("ClubLogSend",       false).toBool ();
+  clublog_email_       = settings_->value ("ClubLogEmail",      "").toString ();
+  clublog_password_    = settings_->value ("ClubLogPassword",   "").toString ();
+  clublog_callsign_    = settings_->value ("ClubLogCallsign",   "").toString ();
+  clublog_api_key_     = settings_->value ("ClubLogApiKey",     "").toString ();
+  clublog_upload_mode_ = settings_->value ("ClubLogUploadMode",  0).toInt ();
   {
     QString const ts = settings_->value ("QRZLastFetch", "").toString ();
     qrz_last_fetch_ = ts.isEmpty () ? QDateTime {}
@@ -3043,6 +3081,13 @@ void Configuration::impl::write_settings ()
   settings_->setValue ("QRZApiKey",      qrz_api_key_);
   settings_->setValue ("QRZUploadMode",  qrz_upload_mode_);
   settings_->setValue ("EQSLUploadMode", eqsl_upload_mode_);
+  // v1.4.0: Club Log real-time upload.
+  settings_->setValue ("ClubLogSend",       send_to_clublog_);
+  settings_->setValue ("ClubLogEmail",      clublog_email_);
+  settings_->setValue ("ClubLogPassword",   clublog_password_);
+  settings_->setValue ("ClubLogCallsign",   clublog_callsign_);
+  settings_->setValue ("ClubLogApiKey",     clublog_api_key_);
+  settings_->setValue ("ClubLogUploadMode", clublog_upload_mode_);
   settings_->setValue ("UseSchedBands", usesched_);
   settings_->setValue ("Sched_hh_1", sched_hh_1_);
   settings_->setValue ("Sched_mm_1", sched_mm_1_);
@@ -3718,6 +3763,19 @@ void Configuration::impl::accept ()
   else                          send_to_qrz_ = false;
   qrz_upload_mode_  = ui_->qrz_mode_combo->currentIndex  () == 1 ? 1 : 0;
   eqsl_upload_mode_ = ui_->eqsl_mode_combo->currentIndex () == 1 ? 1 : 0;
+  // v1.4.0: Club Log. All of e-mail, password and API key are needed
+  // before the service can be enabled at all.
+  clublog_email_    = ui_->clublog_email_edit->text ().trimmed ();
+  clublog_password_ = ui_->clublog_password_edit->text ();
+  clublog_callsign_ = ui_->clublog_callsign_edit->text ().trimmed ().toUpper ();
+  clublog_api_key_  = ui_->clublog_api_key_edit->text ().trimmed ();
+  if (!clublog_email_.isEmpty () && !clublog_password_.isEmpty ()
+      && !clublog_api_key_.isEmpty ()) {
+    send_to_clublog_ = ui_->clublog_check_box->isChecked ();
+  } else {
+    send_to_clublog_ = false;
+  }
+  clublog_upload_mode_ = ui_->clublog_mode_combo->currentIndex () == 1 ? 1 : 0;
   usesched_ = ui_->UseSched_check_box->isChecked ();
   sched_hh_1_ = ui_->hhComboBox_1->currentText ();
   sched_mm_1_ = ui_->mmComboBox_1->currentText ();
@@ -4018,6 +4076,59 @@ void Configuration::impl::on_qrz_help_button_clicked ()
                   "\n"
                   "The key is stored in your WKjTX.ini (plaintext, same\n"
                   "location as the eQSL password). Do not share this file."));
+  mb.translate_buttons ();
+  mb.exec ();
+}
+
+// v1.4.0: Club Log — gate the Enable checkbox on the three mandatory
+// credentials. Same shape as the qrz.com gate above, but Club Log needs
+// e-mail + password + API key, so every one of the three edits re-runs
+// the check.
+void Configuration::impl::update_clublog_enable_state ()
+{
+  bool const usable = !ui_->clublog_api_key_edit->text ().trimmed ().isEmpty ()
+                   && !ui_->clublog_email_edit->text ().trimmed ().isEmpty ()
+                   && !ui_->clublog_password_edit->text ().isEmpty ();
+  ui_->clublog_check_box->setEnabled (usable);
+  if (!usable) ui_->clublog_check_box->setChecked (false);
+}
+
+void Configuration::impl::on_clublog_api_key_edit_textEdited(const QString &)
+{ update_clublog_enable_state (); }
+
+void Configuration::impl::on_clublog_email_edit_textEdited(const QString &)
+{ update_clublog_enable_state (); }
+
+void Configuration::impl::on_clublog_password_edit_textEdited(const QString &)
+{ update_clublog_enable_state (); }
+
+// v1.4.0: Club Log — "?" help button.
+void Configuration::impl::on_clublog_help_button_clicked ()
+{
+  JTDXMessageBox mb;
+  mb.setIcon (QMessageBox::Information);
+  mb.setWindowTitle (tr ("Club Log real-time upload"));
+  mb.setText (tr ("How to set up Club Log real-time upload:\n"
+                  "\n"
+                  "1. Register your callsign at https://clublog.org\n"
+                  "2. E-mail: the address your Club Log account uses\n"
+                  "3. Password: create an Application Password from\n"
+                  "   Club Log - Settings - Application passwords, and\n"
+                  "   paste it here instead of your login password.\n"
+                  "4. Callsign: the log to upload into. Leave empty to\n"
+                  "   use your station callsign.\n"
+                  "5. API key: request one at\n"
+                  "   https://clublog.org/need_api.php\n"
+                  "\n"
+                  "Each logged QSO is then posted to realtime.php one at\n"
+                  "a time, which is what Club Log's API expects from a\n"
+                  "logging program. If Club Log answers 403 (wrong\n"
+                  "credentials) WKjTX stops uploading until you correct\n"
+                  "them here - repeated 403s get your IP firewalled.\n"
+                  "\n"
+                  "Password and API key are stored in your WKjTX.ini in\n"
+                  "plaintext, same as the eQSL password. Do not share\n"
+                  "that file."));
   mb.translate_buttons ();
   mb.exec ();
 }

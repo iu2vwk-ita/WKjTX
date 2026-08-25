@@ -1,7 +1,8 @@
 #ifndef WKJTX_UPLOAD_DISPATCHER_HPP
 #define WKJTX_UPLOAD_DISPATCHER_HPP
 
-// UploadDispatcher — v1.2.0. Central router for qrz.com / eQSL uploads.
+// UploadDispatcher — v1.2.0. Central router for qrz.com / eQSL /
+// Club Log uploads (Club Log added in v1.4.0).
 //
 // Called from MainWindow::acceptQSO2, reads Configuration to decide
 // between:
@@ -26,6 +27,7 @@ class EQSL;
 namespace wkjtx {
 
 class QrzUploader;
+class ClubLogUploader;
 
 enum class UploadMode
 {
@@ -42,6 +44,7 @@ public:
                       UploadQueue * queue,
                       QrzUploader * qrz,
                       EQSL * eqsl,
+                      ClubLogUploader * clublog = nullptr,
                       QObject * parent = nullptr);
     ~UploadDispatcher () override;
 
@@ -76,6 +79,8 @@ private slots:
     void onQrzFail (QString callsign, QString error);
     void onEqslOk  (QString callsign);
     void onEqslFail(QString callsign, QString error);
+    void onClubLogOk   (QString callsign);
+    void onClubLogFail (QString callsign, QString error);
     void stepFlush ();              // drives the serialised flushPending
 
 private:
@@ -87,20 +92,37 @@ private:
 
     UploadMode qrzMode () const;
     UploadMode eqslMode () const;
+    UploadMode clublogMode () const;
     bool qrzEnabled () const;
     bool eqslEnabled () const;
+    bool clublogEnabled () const;
 
-    void uploadViaQrz  (QueuedUpload const & q);
-    void uploadViaEqsl (QueuedUpload const & q);
+    // Queue an entry for one service, uploading right away in Auto mode.
+    void enqueueFor (UploadService service,
+                     UploadMode mode,
+                     QString const & adifRecord,
+                     QString const & callsign,
+                     QString const & band,
+                     QString const & mode_name,
+                     QDateTime const & qsoDate);
+
+    // Send one queue entry through the uploader that owns its service.
+    void uploadEntry (QueuedUpload const & q);
+
+    void uploadViaQrz     (QueuedUpload const & q);
+    void uploadViaEqsl    (QueuedUpload const & q);
+    void uploadViaClubLog (QueuedUpload const & q);
 
     Configuration * cfg_   {nullptr};
     UploadQueue *   queue_ {nullptr};
     QrzUploader *   qrz_   {nullptr};
     EQSL *          eqsl_  {nullptr};
+    ClubLogUploader * clublog_ {nullptr};
 
     // Tracks which queue id is currently in flight per service.
     InFlight qrz_inflight_;
     InFlight eqsl_inflight_;
+    InFlight clublog_inflight_;
 
     // State for flushPending().
     bool              flushing_ {false};

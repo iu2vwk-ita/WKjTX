@@ -16,8 +16,9 @@ namespace {
 QString serviceToString (UploadService s)
 {
     switch (s) {
-    case UploadService::Qrz:  return QStringLiteral ("qrz");
-    case UploadService::Eqsl: return QStringLiteral ("eqsl");
+    case UploadService::Qrz:     return QStringLiteral ("qrz");
+    case UploadService::Eqsl:    return QStringLiteral ("eqsl");
+    case UploadService::ClubLog: return QStringLiteral ("clublog");
     }
     return QStringLiteral ("qrz");
 }
@@ -26,6 +27,8 @@ UploadService serviceFromString (QString const & s)
 {
     if (s.compare (QLatin1String ("eqsl"), Qt::CaseInsensitive) == 0)
         return UploadService::Eqsl;
+    if (s.compare (QLatin1String ("clublog"), Qt::CaseInsensitive) == 0)
+        return UploadService::ClubLog;
     return UploadService::Qrz;
 }
 

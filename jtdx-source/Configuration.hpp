@@ -158,6 +158,14 @@ public:
   // to a full pull.
   QDateTime qrz_last_fetch () const;
   void      set_qrz_last_fetch (QDateTime const &);
+  // WKjTX v1.4.0: Club Log real-time upload. The callsign may be left
+  // empty, in which case the dispatcher falls back to my_callsign().
+  bool    send_to_clublog () const;
+  QString clublog_email () const;
+  QString clublog_password () const;
+  QString clublog_callsign () const;
+  QString clublog_api_key () const;
+  int     clublog_upload_mode () const;   // 0 = Auto, 1 = Manual
   bool usesched() const;
   QString sched_hh_1 () const;
   QString sched_mm_1 () const;

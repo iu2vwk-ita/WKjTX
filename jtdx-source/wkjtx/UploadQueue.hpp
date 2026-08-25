@@ -18,8 +18,9 @@ namespace wkjtx {
 
 enum class UploadService
 {
-    Qrz  = 0,
-    Eqsl = 1,
+    Qrz     = 0,
+    Eqsl    = 1,
+    ClubLog = 2,
 };
 
 struct QueuedUpload

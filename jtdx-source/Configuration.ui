@@ -3283,6 +3283,173 @@ for assessing propagation and system performance.</string>
           </widget>
          </item>
          <item>
+          <widget class="QGroupBox" name="clublog_group_box">
+           <property name="toolTip">
+            <string>Club Log real-time upload. Each logged QSO is posted to clublog.org as it is made. Needs your Club Log e-mail, an application password, and an API key requested at clublog.org/need_api.php.</string>
+           </property>
+           <property name="title">
+            <string>Club Log</string>
+           </property>
+           <layout class="QGridLayout" name="gridLayout_clublog">
+            <property name="leftMargin">
+             <number>5</number>
+            </property>
+            <property name="topMargin">
+             <number>2</number>
+            </property>
+            <property name="rightMargin">
+             <number>2</number>
+            </property>
+            <property name="bottomMargin">
+             <number>2</number>
+            </property>
+            <property name="spacing">
+             <number>4</number>
+            </property>
+            <item row="0" column="0">
+             <widget class="QCheckBox" name="clublog_check_box">
+              <property name="toolTip">
+               <string>Enable real-time upload of every logged QSO to Club Log.</string>
+              </property>
+              <property name="text">
+               <string>Enable &amp;Club Log upload</string>
+              </property>
+             </widget>
+            </item>
+            <item row="0" column="1" colspan="2">
+             <spacer name="horizontalSpacer_clublog">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item row="1" column="0">
+             <widget class="QLabel" name="clublog_email_label">
+              <property name="text">
+               <string>E-&amp;mail:</string>
+              </property>
+              <property name="buddy">
+               <cstring>clublog_email_edit</cstring>
+              </property>
+             </widget>
+            </item>
+            <item row="1" column="1" colspan="2">
+             <widget class="QLineEdit" name="clublog_email_edit">
+              <property name="toolTip">
+               <string>The e-mail address registered with your Club Log account.</string>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="0">
+             <widget class="QLabel" name="clublog_password_label">
+              <property name="text">
+               <string>&amp;Password:</string>
+              </property>
+              <property name="buddy">
+               <cstring>clublog_password_edit</cstring>
+              </property>
+             </widget>
+            </item>
+            <item row="2" column="1" colspan="2">
+             <widget class="QLineEdit" name="clublog_password_edit">
+              <property name="toolTip">
+               <string>Club Log application password (Settings - Application passwords). Do not use your login password.</string>
+              </property>
+              <property name="echoMode">
+               <enum>QLineEdit::Password</enum>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="0">
+             <widget class="QLabel" name="clublog_callsign_label">
+              <property name="text">
+               <string>Log ca&amp;llsign:</string>
+              </property>
+              <property name="buddy">
+               <cstring>clublog_callsign_edit</cstring>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="1" colspan="2">
+             <widget class="QLineEdit" name="clublog_callsign_edit">
+              <property name="toolTip">
+               <string>Callsign whose Club Log log receives the QSOs. Leave empty to use your station callsign.</string>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="0">
+             <widget class="QLabel" name="clublog_api_key_label">
+              <property name="text">
+               <string>API Ke&amp;y:</string>
+              </property>
+              <property name="buddy">
+               <cstring>clublog_api_key_edit</cstring>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="1">
+             <widget class="QLineEdit" name="clublog_api_key_edit">
+              <property name="toolTip">
+               <string>Club Log API key. Request one at clublog.org/need_api.php.</string>
+              </property>
+              <property name="echoMode">
+               <enum>QLineEdit::Password</enum>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="2">
+             <widget class="QPushButton" name="clublog_help_button">
+              <property name="toolTip">
+               <string>How to set up Club Log real-time upload</string>
+              </property>
+              <property name="text">
+               <string>?</string>
+              </property>
+              <property name="maximumSize">
+               <size>
+                <width>30</width>
+                <height>16777215</height>
+               </size>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="0">
+             <widget class="QLabel" name="clublog_mode_label">
+              <property name="text">
+               <string>&amp;Club Log mode:</string>
+              </property>
+              <property name="buddy">
+               <cstring>clublog_mode_combo</cstring>
+              </property>
+             </widget>
+            </item>
+            <item row="5" column="1" colspan="2">
+             <widget class="QComboBox" name="clublog_mode_combo">
+              <property name="toolTip">
+               <string>Automatic: upload each QSO immediately. Manual: queue every QSO for later upload via File - Upload pending QSOs.</string>
+              </property>
+              <item>
+               <property name="text">
+                <string>Automatic (upload each QSO)</string>
+               </property>
+              </item>
+              <item>
+               <property name="text">
+                <string>Manual (queue only)</string>
+               </property>
+              </item>
+             </widget>
+            </item>
+           </layout>
+          </widget>
+         </item>
+         <item>
           <widget class="QGroupBox" name="groupBox_4">
            <property name="toolTip">
             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Primary UDP connection to external software.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>

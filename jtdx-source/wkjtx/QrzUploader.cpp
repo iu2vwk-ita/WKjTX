@@ -17,26 +17,11 @@
 #include <QUrl>
 #include <QUrlQuery>
 
+#include "AdifUtils.hpp"
+
 namespace wkjtx {
 
 namespace {
-
-// Extract a call field from an ADIF record for user-facing messages.
-// Returns empty if not found.
-QString extractCall (QString const & adif)
-{
-  int const i = adif.indexOf (QLatin1String ("<CALL:"), 0, Qt::CaseInsensitive);
-  if (i < 0) return {};
-  int const colon = adif.indexOf (':', i + 6);
-  if (colon < 0) return {};
-  int const gt = adif.indexOf ('>', colon + 1);
-  if (gt < 0) return {};
-  QString const lenStr = adif.mid (colon + 1, gt - colon - 1);
-  bool ok = false;
-  int const len = lenStr.toInt (&ok);
-  if (!ok || len <= 0 || gt + 1 + len > adif.size ()) return {};
-  return adif.mid (gt + 1, len).trimmed ();
-}
 
 // Parse qrz.com response text into a RESULT value.
 QString parseResult (QString const & body)
@@ -70,7 +55,7 @@ void QrzUploader::uploadAdif (QString const & adifRecord)
 {
   if (!enabled_) return;
   if (apiKey_.isEmpty ()) {
-    emit uploadFailed (extractCall (adifRecord),
+    emit uploadFailed (adifField (adifRecord, QStringLiteral ("CALL")),
                        QStringLiteral ("qrz.com: API key non impostata"));
     return;
   }
@@ -89,7 +74,7 @@ void QrzUploader::uploadAdif (QString const & adifRecord)
   QByteArray const data = body.toString (QUrl::FullyEncoded).toUtf8 ();
 
   QNetworkReply * reply = nam_->post (req, data);
-  QString const call = extractCall (adifRecord);
+  QString const call = adifField (adifRecord, QStringLiteral ("CALL"));
 
   connect (reply, &QNetworkReply::finished, this, [this, reply, call] {
     reply->deleteLater ();

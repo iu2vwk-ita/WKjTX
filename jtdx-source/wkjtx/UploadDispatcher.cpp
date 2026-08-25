@@ -4,6 +4,7 @@
 
 #include "../Configuration.hpp"
 #include "QrzUploader.hpp"
+#include "ClubLogUploader.hpp"
 #include "../eqsl.h"
 
 namespace wkjtx {
@@ -19,12 +20,14 @@ UploadDispatcher::UploadDispatcher (Configuration * cfg,
                                     UploadQueue * queue,
                                     QrzUploader * qrz,
                                     EQSL * eqsl,
+                                    ClubLogUploader * clublog,
                                     QObject * parent)
-    : QObject {parent}
-    , cfg_    {cfg}
-    , queue_  {queue}
-    , qrz_    {qrz}
-    , eqsl_   {eqsl}
+    : QObject   {parent}
+    , cfg_      {cfg}
+    , queue_    {queue}
+    , qrz_      {qrz}
+    , eqsl_     {eqsl}
+    , clublog_  {clublog}
 {
     if (qrz_) {
         connect (qrz_, &QrzUploader::uploaded,
@@ -37,6 +40,12 @@ UploadDispatcher::UploadDispatcher (Configuration * cfg,
                  this,  &UploadDispatcher::onEqslOk);
         connect (eqsl_, &EQSL::uploadFailed,
                  this,  &UploadDispatcher::onEqslFail);
+    }
+    if (clublog_) {
+        connect (clublog_, &ClubLogUploader::uploaded,
+                 this,     &UploadDispatcher::onClubLogOk);
+        connect (clublog_, &ClubLogUploader::uploadFailed,
+                 this,     &UploadDispatcher::onClubLogFail);
     }
 }
 
@@ -56,6 +65,12 @@ UploadMode UploadDispatcher::eqslMode () const
     return static_cast<UploadMode> (cfg_->eqsl_upload_mode ());
 }
 
+UploadMode UploadDispatcher::clublogMode () const
+{
+    if (!cfg_) return UploadMode::Auto;
+    return static_cast<UploadMode> (cfg_->clublog_upload_mode ());
+}
+
 bool UploadDispatcher::qrzEnabled () const
 {
     if (!cfg_) return false;
@@ -68,6 +83,14 @@ bool UploadDispatcher::eqslEnabled () const
     return cfg_->send_to_eqsl ();
 }
 
+bool UploadDispatcher::clublogEnabled () const
+{
+    if (!cfg_ || !clublog_) return false;
+    return cfg_->send_to_clublog ()
+        && !cfg_->clublog_email ().isEmpty ()
+        && !cfg_->clublog_api_key ().isEmpty ();
+}
+
 void UploadDispatcher::onQsoAccepted (QString const & adifRecord,
                                       QString const & callsign,
                                       QString const & band,
@@ -76,40 +99,57 @@ void UploadDispatcher::onQsoAccepted (QString const & adifRecord,
 {
     if (!queue_) return;
 
-    // qrz.com
     if (qrzEnabled ()) {
-        QueuedUpload q;
-        q.service     = UploadService::Qrz;
-        q.adifRecord  = adifRecord;
-        q.callsign    = callsign;
-        q.band        = band;
-        q.mode        = mode;
-        q.qsoDate     = qsoDate;
-        int const id = queue_->enqueue (q);
-
-        if (qrzMode () == UploadMode::Auto) {
-            QueuedUpload live = q; live.id = id;
-            uploadViaQrz (live);
-        }
+        enqueueFor (UploadService::Qrz, qrzMode (),
+                    adifRecord, callsign, band, mode, qsoDate);
     }
 
     // eQSL — the legacy inline call in acceptQSO2 was removed; routing
     // now goes through the dispatcher for Auto-mode + the queue for
     // Manual mode / failure retry.
     if (eqslEnabled ()) {
-        QueuedUpload q;
-        q.service     = UploadService::Eqsl;
-        q.adifRecord  = adifRecord;
-        q.callsign    = callsign;
-        q.band        = band;
-        q.mode        = mode;
-        q.qsoDate     = qsoDate;
-        int const id = queue_->enqueue (q);
+        enqueueFor (UploadService::Eqsl, eqslMode (),
+                    adifRecord, callsign, band, mode, qsoDate);
+    }
 
-        if (eqslMode () == UploadMode::Auto) {
-            QueuedUpload live = q; live.id = id;
-            uploadViaEqsl (live);
-        }
+    // Club Log (v1.4.0). realtime.php is rated for operator-pace QSOs,
+    // which is exactly one call per logged contact.
+    if (clublogEnabled ()) {
+        enqueueFor (UploadService::ClubLog, clublogMode (),
+                    adifRecord, callsign, band, mode, qsoDate);
+    }
+}
+
+void UploadDispatcher::enqueueFor (UploadService service,
+                                   UploadMode mode,
+                                   QString const & adifRecord,
+                                   QString const & callsign,
+                                   QString const & band,
+                                   QString const & mode_name,
+                                   QDateTime const & qsoDate)
+{
+    QueuedUpload q;
+    q.service    = service;
+    q.adifRecord = adifRecord;
+    q.callsign   = callsign;
+    q.band       = band;
+    q.mode       = mode_name;
+    q.qsoDate    = qsoDate;
+    int const id = queue_->enqueue (q);
+
+    if (mode == UploadMode::Auto) {
+        QueuedUpload live = q;
+        live.id = id;
+        uploadEntry (live);
+    }
+}
+
+void UploadDispatcher::uploadEntry (QueuedUpload const & q)
+{
+    switch (q.service) {
+    case UploadService::Qrz:     uploadViaQrz (q);     break;
+    case UploadService::Eqsl:    uploadViaEqsl (q);    break;
+    case UploadService::ClubLog: uploadViaClubLog (q); break;
     }
 }
 
@@ -118,8 +158,7 @@ void UploadDispatcher::retry (int queueId)
     if (!queue_) return;
     for (auto const & e : queue_->all ()) {
         if (e.id == queueId) {
-            if (e.service == UploadService::Qrz)  uploadViaQrz (e);
-            else                                  uploadViaEqsl (e);
+            uploadEntry (e);
             return;
         }
     }
@@ -155,6 +194,20 @@ void UploadDispatcher::uploadViaEqsl (QueuedUpload const & q)
                    /*rpt_sent*/ QStringLiteral ("0"),
                    q.band,
                    /*eqslcomments*/ QString {});
+}
+
+void UploadDispatcher::uploadViaClubLog (QueuedUpload const & q)
+{
+    if (!clublog_ || !cfg_) return;
+    clublog_->setCredentials (cfg_->clublog_email (),
+                              cfg_->clublog_password (),
+                              cfg_->clublog_callsign ().isEmpty ()
+                                  ? cfg_->my_callsign ()
+                                  : cfg_->clublog_callsign (),
+                              cfg_->clublog_api_key ());
+    clublog_->setEnabled (true);
+    clublog_inflight_ = {q.id, true};
+    clublog_->uploadAdif (q.adifRecord);
 }
 
 void UploadDispatcher::onQrzOk (QString callsign)
@@ -197,6 +250,26 @@ void UploadDispatcher::onEqslFail (QString callsign, QString error)
     if (flushing_) { ++flush_fail_; stepFlush (); }
 }
 
+void UploadDispatcher::onClubLogOk (QString callsign)
+{
+    if (!clublog_inflight_.valid || !queue_) return;
+    int const id = clublog_inflight_.id;
+    clublog_inflight_ = {};
+    queue_->markSuccess (id);
+    emit serviceSucceeded (UploadService::ClubLog, callsign);
+    if (flushing_) { ++flush_ok_; stepFlush (); }
+}
+
+void UploadDispatcher::onClubLogFail (QString callsign, QString error)
+{
+    if (!clublog_inflight_.valid || !queue_) return;
+    int const id = clublog_inflight_.id;
+    clublog_inflight_ = {};
+    queue_->markFailed (id, error);
+    emit serviceFailed (UploadService::ClubLog, callsign, error);
+    if (flushing_) { ++flush_fail_; stepFlush (); }
+}
+
 void UploadDispatcher::flushPending ()
 {
     if (flushing_ || !queue_) return;
@@ -234,8 +307,7 @@ void UploadDispatcher::stepFlush ()
         bool found = false;
         for (auto const & e : queue_->all ()) {
             if (e.id == id) {
-                if (e.service == UploadService::Qrz)  uploadViaQrz (e);
-                else                                  uploadViaEqsl (e);
+                uploadEntry (e);
                 found = true;
                 break;
             }

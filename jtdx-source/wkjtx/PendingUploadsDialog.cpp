@@ -19,8 +19,12 @@ namespace {
 
 QString serviceLabel (UploadService s)
 {
-    return s == UploadService::Qrz ? QStringLiteral ("qrz.com")
-                                   : QStringLiteral ("eQSL");
+    switch (s) {
+    case UploadService::Qrz:     return QStringLiteral ("qrz.com");
+    case UploadService::Eqsl:    return QStringLiteral ("eQSL");
+    case UploadService::ClubLog: return QStringLiteral ("Club Log");
+    }
+    return QStringLiteral ("qrz.com");
 }
 
 } // namespace
