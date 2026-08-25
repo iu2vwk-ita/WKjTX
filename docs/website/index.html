@@ -3,18 +3,18 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>WKjTX 1.2 — HF Digital Modes for Windows &amp; Linux · IU2VWK</title>
-<meta name="description" content="WKjTX 1.2 — freeware HF digital mode client for Windows and Linux. FT8, FT4, JT65, JT9, WSPR-2. NEW: qrz.com Logbook upload/download · Auto-CQ after QSO · NTP time sync · 19 languages · 3-slot radio profile quick-switch · auto-call · ADIF log import/export. Free fork of JTDX by IU2VWK." />
+<title>WKjTX 1.3 — HF Digital Modes for Windows &amp; Linux · IU2VWK</title>
+<meta name="description" content="WKjTX 1.3 — freeware HF digital mode client for Windows and Linux. FT8, FT4, JT65, JT9, WSPR-2. NEW: Hamlib REST API radio control · 3-slot radio profile quick-switch · auto-call with 7 triggers · qrz.com Logbook upload/download · Auto-CQ after QSO · NTP time sync · 19 languages · ADIF log import/export. Free fork of JTDX by IU2VWK." />
 
 <meta property="og:type" content="website" />
 <meta property="og:url" content="https://iu2vwk.com/wkjtx/" />
-<meta property="og:title" content="WKjTX 1.2 — HF Digital Modes for Windows &amp; Linux" />
-<meta property="og:description" content="qrz.com Logbook upload/download · Auto-CQ after QSO · NTP time sync · 19 languages · 3-slot radio profiles · FT8/FT4/JT65/WSPR-2 · free download." />
+<meta property="og:title" content="WKjTX 1.3 — HF Digital Modes for Windows &amp; Linux" />
+<meta property="og:description" content="Hamlib REST API radio control · auto-call · qrz.com Logbook upload/download · Auto-CQ after QSO · NTP time sync · 19 languages · 3-slot radio profiles · FT8/FT4/JT65/WSPR-2 · free download." />
 <meta property="og:image" content="https://iu2vwk.com/wkjtx/img/screenshot-main.png" />
 
 <meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="WKjTX 1.2 — HF Digital Modes for Windows &amp; Linux" />
-<meta name="twitter:description" content="qrz.com Logbook · Auto-CQ · NTP sync · 19 languages · FT8/FT4 · free download by IU2VWK." />
+<meta name="twitter:title" content="WKjTX 1.3 — HF Digital Modes for Windows &amp; Linux" />
+<meta name="twitter:description" content="Hamlib REST API · auto-call · qrz.com Logbook · NTP sync · 19 languages · FT8/FT4 · free download by IU2VWK." />
 <meta name="twitter:image" content="https://iu2vwk.com/wkjtx/img/screenshot-main.png" />
 
 <link rel="icon" type="image/x-icon" href="img/favicon.ico" />
@@ -37,6 +37,7 @@
     <a href="#profiles">Radio Profiles</a>
     <a href="#autocall">Auto-Call</a>
     <a href="#data">Data Update</a>
+    <a href="#next">Next Release</a>
     <a href="#features">Features</a>
     <a href="#download">Download</a>
     <a href="https://iu2vwk.com/">IU2VWK Home ↗</a>
@@ -53,9 +54,10 @@
     <div class="hero-left">
       <div class="eyebrow">— Free download · Windows 10 / 11 + Linux · 64-bit · Installer or Portable</div>
       <h1>WK<em>jTX</em></h1>
-      <div class="version-line">v1.2.3 · fork of JTDX · derivative of WSJT-X by K1JT</div>
+      <div class="version-line">v1.3.0 · fork of JTDX · derivative of WSJT-X by K1JT</div>
       <p class="lede">
         A freeware weak-signal HF digital mode client for Windows — with
+        <b>Hamlib REST API radio control</b>, <b>auto-call</b>,
         <b>qrz.com Logbook upload/download</b>, <b>Auto-CQ after QSO</b>,
         <b>NTP time sync</b>, <b>19 languages</b>, <b>3-slot radio
         profile quick-switch</b>, and <b>built-in log import/export</b>.
@@ -68,7 +70,7 @@
         <a href="https://github.com/iu2vwk-ita/WKjTX/releases" class="dl-btn dl-btn--primary" target="_blank" rel="noopener">
           <span class="dl-icon">&#11015;</span>
           <span class="dl-text">
-            <span class="dl-title">Download WKjTX 1.2.3</span>
+            <span class="dl-title">Download WKjTX 1.3.0</span>
             <span class="dl-sub">Installer or Portable · Windows + Linux 64-bit</span>
           </span>
         </a>
@@ -82,7 +84,7 @@
       <div class="dl-hint">Free software · GPL-3.0 · no signup required</div>
 
       <ul class="micro">
-        <li><b>NEW in 1.2:</b> qrz.com Logbook upload/download · Auto-CQ after QSO · 19 languages</li>
+        <li><b>NEW in 1.3:</b> Hamlib REST API radio control · radio profile quick-switch · auto-call</li>
         <li><b>FT8 · FT4 · JT65 · JT9 · T10 · WSPR-2</b> — same decoders as JTDX upstream</li>
         <li>JTDX multi-pass decoder — more decodes on crowded HF bands</li>
         <li>NTP time-sync badge · 3-slot radio profile quick-switch · auto-call · ADIF import/export</li>
@@ -153,22 +155,70 @@
 </section>
 
 
-<!-- ===== WHAT'S NEW v1.2.3 ===== -->
+<!-- ===== WHAT'S NEW v1.3.0 ===== -->
 <section class="whatsnew" style="padding:26px 24px;background:#0d0a06;border-top:1px solid #2a1f14;border-bottom:1px solid #2a1f14;">
   <div style="max-width:1100px;margin:0 auto;display:grid;grid-template-columns:auto 1fr;gap:20px;align-items:center;">
     <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px 18px;border:1px solid #c46d00;border-radius:6px;background:#1a1207;min-width:110px;">
       <div style="font-size:11px;color:#a69070;letter-spacing:1.5px;text-transform:uppercase;">Latest</div>
-      <div style="font-size:22px;font-weight:700;color:#ffb347;">v1.2.3</div>
-      <div style="font-size:11px;color:#a69070;">2026-05-07</div>
+      <div style="font-size:22px;font-weight:700;color:#ffb347;">v1.3.0</div>
+      <div style="font-size:11px;color:#a69070;">2026-06-30</div>
     </div>
     <div>
-      <h3 style="margin:0 0 6px 0;color:#ffb347;font-size:18px;">What's new in 1.2.3 — First Linux release</h3>
+      <h3 style="margin:0 0 6px 0;color:#ffb347;font-size:18px;">What's new in 1.3.0 — Hamlib REST API integration</h3>
       <ul style="margin:0;padding-left:18px;color:#d8c8a8;line-height:1.5;font-size:14px;">
-        <li><b>WKjTX now also runs on Linux.</b> Same source, same decoder, same UI — packaged as <code>.tar.gz</code> (distro-agnostic), <code>.deb</code> (Debian/Ubuntu), and <code>.rpm</code> (Fedora/openSUSE/RHEL). Built on every release tag by GitHub Actions on Ubuntu 22.04 with system Qt5 + qwt + fftw + boost.</li>
-        <li>Landing page reworked — accurate "installer or portable" copy for Windows, plus the new Linux download row. No source changes to WKjTX behavior versus v1.2.2.</li>
-        <li>Previous (v1.2.2): Minor NSIS installer bug fix (Add/Remove Programs version string).</li>
-        <li>Previous (v1.2.1): Radio profile slot 2 / 3 switch fix · slot 1 main-radio restore · JTDX.ini integrity during overlay sessions · INI key fallbacks.</li>
+        <li><b>Hamlib REST API transceiver.</b> Control your rig over HTTP through <code>rigctld --rest-api</code> — frequency, mode, PTT, split and polling, with the same Tx/Rx sequencing as serial CAT. Host, port and TRX ID are configurable per radio profile slot.</li>
+        <li><b>Radio profile quick-switch</b> — three slots in the menubar corner (Home / Portable / Mobile). One click swaps rig, CAT port, audio devices and PTT method.</li>
+        <li><b>Auto-call</b> — <i>File → Auto-call...</i>, seven triggers: new DXCC, new band, new zone, new grid, spotted, needed, never worked. Hardcoded safeguards: one call per station every 120 s, three auto-calls per minute maximum, flashing status-bar badge whenever it is armed.</li>
+        <li><b>IC-705 PTT fix</b> — CI-V PTT OFF now works; the Hamlib caps were missing <code>set_ptt</code>/<code>get_ptt</code>, which left the radio stuck in transmit after FT8.</li>
+        <li>Previous (v1.2.4): TX hang on slot 2 (IC-705) — PTT now released when modulation completes.</li>
+        <li>Previous (v1.2.3): first Linux release — <code>.tar.gz</code>, <code>.deb</code> and <code>.rpm</code> built on every tag by GitHub Actions.</li>
         <li>Previous (v1.2.0): qrz.com Logbook upload/download · Auto-CQ after QSO · NTP time sync · 19 languages.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+
+<!-- ===== NEXT RELEASE (v1.4, in development) ===== -->
+<section id="next" class="profiles-showcase">
+  <div class="sec-head">
+    <span class="sec-num">&#9679;</span>
+    <h2>Coming in 1.4 — <em>Club Log + update check</em></h2>
+    <p>In development, not released yet. Built and running here; it lands on the Releases page when it has had some air time.</p>
+  </div>
+
+  <div class="profiles-grid">
+    <div class="profiles-shot">
+      <img src="img/screenshot-clublog.png"
+           alt="WKjTX Settings, Reporting tab — Club Log section with Enable checkbox, E-mail, Password, Log callsign, API Key and Club Log mode set to Automatic"
+           loading="lazy" />
+      <div class="profiles-shot-caption">Settings &rarr; Reporting &rarr; Club Log &middot; Enable stays greyed out until e-mail, password and API key are filled in</div>
+    </div>
+
+    <div class="profiles-copy">
+      <p class="profiles-lead">
+        <b>Club Log real-time upload.</b> Every QSO you log is posted to
+        clublog.org as you make it &mdash; the same Automatic / Manual
+        queue behaviour WKjTX already gives you for qrz.com and eQSL,
+        sharing the same pending-uploads list, retry rows and
+        close-time prompt.
+      </p>
+      <ul class="profiles-list">
+        <li><b>Application password, not your login password</b> &mdash; the <code>?</code> button walks you through Club Log &rarr; Settings &rarr; Application passwords, and where to request the API key.</li>
+        <li><b>Log callsign per upload</b> &mdash; point QSOs at a contest or special-event log; leave it empty to use your station callsign.</li>
+        <li><b>403 stops the uploader</b> &mdash; Club Log firewalls IPs that keep retrying with bad credentials, so WKjTX latches off until you correct them instead of hammering the server.</li>
+      </ul>
+
+      <p class="profiles-lead" style="margin-top:26px;">
+        <b>Check for updates.</b> <i>Help &rarr; Check for updates...</i>
+        asks GitHub whether a newer release exists, and offers Download,
+        Later or Skip this version. A second menu entry runs the same
+        check once at startup and stays silent unless there is something
+        new.
+      </p>
+      <ul class="profiles-list">
+        <li><b>The portable build never updated itself</b> &mdash; without this, an operator stays on whatever ZIP they first unpacked.</li>
+        <li><b>One unauthenticated GET</b> to the GitHub releases API. Nothing about your station, your log or your callsign leaves the PC.</li>
       </ul>
     </div>
   </div>

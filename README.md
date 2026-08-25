@@ -49,6 +49,24 @@ Right-click for optional 10-min auto-sync install.
 - **UPDATE DATA TLS fix** — one-click refresh works on fresh
   portable installs again.
 
+### What's new in 1.4 (in development)
+
+- **Check for updates** — *Help → Check for updates...*, plus an
+  optional silent check at startup. The portable zip never updates
+  itself, so this is the only thing that tells you a new release
+  exists. One unauthenticated GET to the GitHub Releases API; nothing
+  about your station leaves the PC.
+- **Club Log real-time upload** — Settings → Reporting → Club Log.
+  E-mail, application password, log callsign and API key; every logged
+  QSO is posted to Club Log as you make it, with the same
+  Automatic / Manual queue behaviour as qrz.com and eQSL.
+
+  ![Club Log settings — Enable checkbox, E-mail, Password, Log callsign, API Key and Club Log mode set to Automatic](docs/screenshots/v1.4.0-clublog-settings.png)
+
+  The Enable box stays greyed out until e-mail, password and API key
+  are all filled in, and the `?` button explains where to get the
+  application password and the API key.
+
 ### What's new in 1.3
 
 - **Hamlib REST API transceiver** — control your radio over HTTP
@@ -104,10 +122,11 @@ Right-click for optional 10-min auto-sync install.
 - **Font size spinboxes** next to the existing *Application Font...*
   and *Decoded Text Font...* buttons — change point size with one
   click.
-- **English-only binary**, user-supplied translations: drop your
-  compiled `wkjtx_<locale>.qm` into `bin/translations/` and switch
-  *Language* in `JTDX.ini`. Legacy `jtdx_<locale>.qm` names are
-  accepted as-is. See
+- **19 bundled translations, and room for your own**: the shipped
+  languages are compiled into the binary as Qt resources and selected
+  from the *Language* menu. To add or override one, drop your compiled
+  `wkjtx_<locale>.qm` into `bin/translations/` and switch *Language* in
+  `JTDX.ini`. Legacy `jtdx_<locale>.qm` names are accepted as-is. See
   [`bin/translations/README.txt`](bin/translations/README.txt) in
   each release.
 - **5 UI themes** selectable from the *Tema* menu: **Amber Classic**
@@ -118,7 +137,10 @@ Right-click for optional 10-min auto-sync install.
   your browser — manual drop-in of `libhamlib-5.dll` with an
   automatic `_old` backup slot.
 
-Planned in later releases: per-profile log routing, third outgoing UDP port, FT2 mode.
+Planned in later releases: per-profile log routing, third outgoing UDP
+port. FT2 is on hold — see
+[`docs/plans/v1.4-ft2-evaluation.md`](docs/plans/v1.4-ft2-evaluation.md)
+for why.
 
 ## Download
 

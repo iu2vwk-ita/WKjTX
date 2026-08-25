@@ -8,6 +8,48 @@ upstream JTDX version is preserved in internal Versions.cmake
 for code compatibility, but public releases are tagged
 `v0.1.0` → `v1.0.0` reflecting WKjTX's own delivery phases.
 
+## [Unreleased] — v1.4.0 — Update check · Club Log
+
+### Added
+- **Check for updates** — *Help → Check for updates...* asks the GitHub
+  Releases API whether a newer WKjTX tag has been published, and offers
+  Download / Later / Skip this version. A second, checkable menu entry
+  (*Check for updates at startup*, on by default) runs the same check
+  once, 8 seconds after start, and stays silent unless there is
+  something newer. The portable build installs nothing and never
+  self-updates, so without this an operator stays on whatever zip they
+  first unpacked. Only one unauthenticated GET is made; nothing about
+  the station is sent.
+- **Club Log real-time upload** — Settings → Reporting → Club Log.
+
+  ![Club Log settings — Enable checkbox, E-mail, Password, Log callsign, API Key and upload mode](docs/screenshots/v1.4.0-clublog-settings.png)
+
+  Fill in the account e-mail, an application password, the log callsign
+  (empty = station callsign) and an API key from
+  `clublog.org/need_api.php`, and every logged QSO is posted to
+  `realtime.php` as it happens. Automatic and Manual (queue only) modes
+  work exactly as they already do for qrz.com and eQSL, and Club Log
+  entries share the same persistent pending-uploads queue, retry rows
+  and close-time prompt.
+  If Club Log answers HTTP 403 the uploader latches off until the
+  credentials are edited — their API notes warn that repeated bad-auth
+  requests get the IP firewalled.
+
+### Changed
+- `UploadDispatcher` now routes three services instead of two; the
+  per-service branches in `retry()` and the queue flush collapsed into
+  a single `uploadEntry()` switch, so a fourth service is a one-line
+  addition.
+- ADIF field extraction moved out of `QrzUploader.cpp` into a shared
+  header-only `wkjtx/AdifUtils.hpp` (`adifField()`), now used by both
+  uploaders. It also handles the `<CALL:6:S>` type-suffix form, which
+  the old private helper did not.
+
+### Notes
+- New unit test `test_update_checker` locks the version-ordering rules
+  behind the update check (numeric fields, missing fields, `v` prefix,
+  `-rcN` sorting before the plain release).
+
 ## [v1.3.0] — 2026-06-30 — Hamlib REST API integration
 
 ### Added
