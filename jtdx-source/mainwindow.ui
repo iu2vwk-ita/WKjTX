@@ -4783,6 +4783,9 @@ list. The list can be maintained in Settings (F2).</string>
     <addaction name="separator"/>
     <addaction name="actionCopyright_Notice"/>
     <addaction name="separator"/>
+    <addaction name="actionCheck_for_updates"/>
+    <addaction name="actionAuto_update_check"/>
+    <addaction name="separator"/>
     <addaction name="actionAbout"/>
    </widget>
    <widget class="QMenu" name="menuMode">
@@ -5497,6 +5500,25 @@ list. The list can be maintained in Settings (F2).</string>
   <action name="actionCopyright_Notice">
    <property name="text">
     <string>Copyright notice from WSJT Development Group</string>
+   </property>
+  </action>
+  <action name="actionCheck_for_updates">
+   <property name="text">
+    <string>Check for updates...</string>
+   </property>
+   <property name="toolTip">
+    <string>Ask GitHub whether a newer WKjTX release has been published.</string>
+   </property>
+  </action>
+  <action name="actionAuto_update_check">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Check for updates at startup</string>
+   </property>
+   <property name="toolTip">
+    <string>When on, WKjTX asks GitHub once per start whether a newer release exists. Nothing else is sent or downloaded.</string>
    </property>
   </action>
   <action name="actionFT8">

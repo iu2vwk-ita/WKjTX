@@ -77,6 +77,8 @@ class HelpTextWindow;
 class EQSL;
 namespace wkjtx {
   class QrzUploader;
+  class ClubLogUploader;
+  class UpdateChecker;
   class QrzDownloader;
   class UploadQueue;
   class UploadDispatcher;
@@ -164,6 +166,8 @@ private slots:
   void on_filterButton_clicked (bool);
   void on_AGCcButton_clicked (bool);
   void on_actionAbout_triggered();
+  void on_actionCheck_for_updates_triggered();
+  void on_actionAuto_update_check_toggled(bool);
   void on_enableTxButton_clicked (bool);
   void on_stopTxButton_clicked();
   void on_stopButton_clicked();
@@ -734,6 +738,8 @@ private:
   EQSL *Eqsl;
   // v1.2.0: qrz.com + unified upload queue with auto/manual modes.
   wkjtx::QrzUploader      * m_qrz            {nullptr};
+  wkjtx::ClubLogUploader  * m_clubLog        {nullptr};
+  wkjtx::UpdateChecker    * m_updateChecker  {nullptr};
   wkjtx::QrzDownloader    * m_qrzDownloader  {nullptr};
   wkjtx::UploadQueue      * m_uploadQueue    {nullptr};
   wkjtx::UploadDispatcher * m_uploadDispatch {nullptr};

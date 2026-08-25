@@ -72,3 +72,9 @@ wkjtx_add_test (test_autocall_pipeline
   ../detectors/CallsignDetector.cpp
   ../detectors/Maidenhead.cpp
 )
+
+# test_update_checker — version-ordering rules behind Help - Check for
+# updates. No network access.
+wkjtx_add_test (test_update_checker
+  ../UpdateChecker.cpp
+)

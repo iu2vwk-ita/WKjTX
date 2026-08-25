@@ -37,6 +37,11 @@ set (WKJTX_SOURCES
   LogRouter.hpp
   QrzUploader.cpp
   QrzUploader.hpp
+  ClubLogUploader.cpp
+  ClubLogUploader.hpp
+  UpdateChecker.cpp
+  UpdateChecker.hpp
+  AdifUtils.hpp
   QrzDownloader.cpp
   QrzDownloader.hpp
   UploadQueue.cpp

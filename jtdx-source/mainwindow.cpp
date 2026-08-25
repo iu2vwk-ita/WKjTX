@@ -68,6 +68,8 @@
 #include "wkjtx/TimeSync.hpp"
 #include "wkjtx/TimeSyncBadge.hpp"
 #include "wkjtx/QrzUploader.hpp"
+#include "wkjtx/ClubLogUploader.hpp"
+#include "wkjtx/UpdateChecker.hpp"
 #include "wkjtx/QrzDownloader.hpp"
 #include "wkjtx/UploadQueue.hpp"
 #include "wkjtx/UploadDispatcher.hpp"
@@ -156,6 +158,17 @@ namespace
   QRegularExpression words_re {R"(^(?:(?<word1>(?:CQ|DE|QRZ)(?:\s?DX|\s(?:[A-Z]{2}|\d{3}))|[A-Z0-9/]+)\s)(?:(?<word2>[A-Z0-9/]+)(?:\s(?<word3>[-+A-Z0-9]+)(?:\s(?<word4>(?:OOO|(?!RR73)[A-R]{2}[0-9]{2})))?)?)?)"};
   constexpr int default_rx_audio_buffer_frames {-1}; // lets Qt decide
   constexpr int default_tx_audio_buffer_frames {-1}; // lets Qt decide
+
+  // WKjTX: short service name used in ALL.TXT and the status bar.
+  QString uploadServiceName (wkjtx::UploadService s)
+  {
+    switch (s) {
+    case wkjtx::UploadService::Qrz:     return QStringLiteral ("QRZ");
+    case wkjtx::UploadService::Eqsl:    return QStringLiteral ("eQSL");
+    case wkjtx::UploadService::ClubLog: return QStringLiteral ("ClubLog");
+    }
+    return QStringLiteral ("QRZ");
+  }
 
   bool message_is_73 (int type, QStringList const& msg_parts)
   {
@@ -488,25 +501,82 @@ MainWindow::MainWindow(bool multiple, QSettings * settings, QSharedMemory *shdme
     m_uploadQueue    = new wkjtx::UploadQueue {queuePath, this};
     m_qrz            = new wkjtx::QrzUploader {this};
     m_qrzDownloader  = new wkjtx::QrzDownloader {this};
+    m_clubLog        = new wkjtx::ClubLogUploader {this};
     m_uploadDispatch = new wkjtx::UploadDispatcher {&m_config, m_uploadQueue,
-                                                    m_qrz, Eqsl, this};
+                                                    m_qrz, Eqsl, m_clubLog,
+                                                    this};
     connect (m_uploadDispatch, &wkjtx::UploadDispatcher::serviceSucceeded,
              this, [this] (wkjtx::UploadService s, QString call) {
-                 QString const svc = (s == wkjtx::UploadService::Qrz
-                                        ? QStringLiteral ("QRZ")
-                                        : QStringLiteral ("eQSL"));
+                 QString const svc = uploadServiceName (s);
                  writeToALLTXT (svc + ": uploaded " + call);
                  statusBar ()->showMessage (svc + tr (": uploaded ") + call, 5000);
              });
     connect (m_uploadDispatch, &wkjtx::UploadDispatcher::serviceFailed,
              this, [this] (wkjtx::UploadService s, QString call, QString err) {
-                 QString const svc = (s == wkjtx::UploadService::Qrz
-                                        ? QStringLiteral ("QRZ")
-                                        : QStringLiteral ("eQSL"));
+                 QString const svc = uploadServiceName (s);
                  writeToALLTXT (svc + ": FAIL " + call + " - " + err);
                  statusBar ()->showMessage (svc + tr (": fail ") + call
                                              + QStringLiteral (" - ") + err, 8000);
              });
+  }
+  // v1.4.0: GitHub release check. Portable builds never self-update, so
+  // without this a user stays on whatever zip they first unpacked.
+  {
+    m_updateChecker = new wkjtx::UpdateChecker {version (), this};
+    connect (m_updateChecker, &wkjtx::UpdateChecker::updateAvailable,
+             this, [this] (QString tag, QString url, QString notes,
+                           bool userInitiated) {
+                 Q_UNUSED (notes);
+                 // The automatic check honours a per-version mute; an
+                 // explicit menu request always talks.
+                 if (!userInitiated
+                     && m_settings->value ("UpdateSkipVersion", "").toString () == tag) {
+                     return;
+                 }
+                 JTDXMessageBox mb;
+                 mb.setIcon (QMessageBox::Information);
+                 mb.setWindowTitle (tr ("WKjTX update available"));
+                 mb.setText (tr ("WKjTX %1 is available — you are running %2.")
+                             .arg (tag).arg (version ()));
+                 mb.setInformativeText (tr ("Downloads are on the GitHub "
+                                            "releases page."));
+                 auto * dl   = mb.addButton (tr ("Download"), QMessageBox::AcceptRole);
+                 auto * skip = mb.addButton (tr ("Skip this version"),
+                                             QMessageBox::DestructiveRole);
+                 mb.addButton (tr ("Later"), QMessageBox::RejectRole);
+                 mb.setDefaultButton (dl);
+                 mb.exec ();
+                 if (mb.clickedButton () == dl) {
+                     QDesktopServices::openUrl (QUrl {url});
+                 } else if (mb.clickedButton () == skip) {
+                     m_settings->setValue ("UpdateSkipVersion", tag);
+                 }
+             });
+    connect (m_updateChecker, &wkjtx::UpdateChecker::upToDate,
+             this, [this] (QString current, bool userInitiated) {
+                 if (!userInitiated) return;   // silent on startup
+                 JTDXMessageBox::information_message (this,
+                     tr ("Check for updates"),
+                     tr ("WKjTX %1 is the latest release.").arg (current));
+             });
+    connect (m_updateChecker, &wkjtx::UpdateChecker::checkFailed,
+             this, [this] (QString error, bool userInitiated) {
+                 writeToALLTXT ("Update check failed: " + error);
+                 if (!userInitiated) return;
+                 JTDXMessageBox::warning_message (this,
+                     tr ("Check for updates"),
+                     tr ("Update check failed: %1").arg (error));
+             });
+
+    bool const autoCheck = m_settings->value ("UpdateCheckOnStartup", true).toBool ();
+    ui->actionAuto_update_check->setChecked (autoCheck);
+    if (autoCheck) {
+        // Delayed so the check never competes with audio device setup
+        // and the first decode cycle.
+        QTimer::singleShot (8000, this, [this] {
+            if (m_updateChecker) m_updateChecker->check (false);
+        });
+    }
   }
   m_config.set_jtdxtime (m_jtdxtime);
   ui->decodedTextBrowser->setConfiguration (&m_config);
@@ -2322,6 +2392,21 @@ void MainWindow::monitor (bool state)
 }
 
 void MainWindow::on_actionAbout_triggered() { CAboutDlg {this}.exec (); } //Display "About"
+
+// v1.4.0: Help - Check for updates...
+void MainWindow::on_actionCheck_for_updates_triggered()
+{
+  if (!m_updateChecker || m_updateChecker->busy ()) return;
+  // An explicit request clears a previous "skip this version" mute.
+  m_settings->remove ("UpdateSkipVersion");
+  m_updateChecker->check (true);
+}
+
+// v1.4.0: Help - Check for updates at startup (checkable).
+void MainWindow::on_actionAuto_update_check_toggled(bool checked)
+{
+  m_settings->setValue ("UpdateCheckOnStartup", checked);
+}
 
 // v1.2.0: File → Upload pending QSOs... → open the queue dialog.
 void MainWindow::on_actionUpload_pending_triggered()
